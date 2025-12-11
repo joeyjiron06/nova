@@ -8,6 +8,9 @@
     "test": "vitest",
     "lint": "eslint"
   },
+  "repository": {
+    "url": "https://github.com/joeyjiron06/nova"
+  },
   "type": "module",
   "exports": {
     ".": {

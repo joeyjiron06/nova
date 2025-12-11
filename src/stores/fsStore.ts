@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { outputFile, remove } from "fs-extra/esm";
-import { readFile, readdir } from "fs/promises";
-import path from "path";
+import { readFile, readdir } from "node:fs/promises";
+import path from "node:path";
 import superjson from "superjson";
 import type {
   CacheEntry,

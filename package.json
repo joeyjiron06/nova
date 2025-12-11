@@ -4,7 +4,7 @@
   "description": "A universal caching library that can be used in any javascript runtime (e.g. nodejs, browser, bun, deno, etc.)",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "vite build",
     "test": "vitest",
     "lint": "eslint"
   },
@@ -54,6 +54,8 @@
     "jiti": "^2.6.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.49.0",
+    "unplugin-dts": "1.0.0-beta.6",
+    "vite": "^7.2.7",
     "vitest": "^4.0.15"
   },
   "dependencies": {

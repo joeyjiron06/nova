@@ -43,7 +43,7 @@ export type CacheEntry<V> = {
   expiresAt?: number;
 };
 
-export type CacheEntryMeta = Omit<CacheEntry, "value">;
+export type CacheEntryMeta = Omit<CacheEntry<unknown>, "value">;
 
 export type CacheWrapOptions = {
   /**

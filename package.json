@@ -1,5 +1,5 @@
 {
-  "name": "nova",
+  "name": "nova-cache",
   "version": "1.0.0-beta.1",
   "description": "A universal caching library that can be used in any javascript runtime (e.g. nodejs, browser, bun, deno, etc.)",
   "main": "index.js",

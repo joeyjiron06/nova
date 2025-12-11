@@ -5,14 +5,14 @@ An extremely lightweight utility for caching data. This is an isomorphic library
 ## Installation
 
 ```bash
-pnpm i nova
+pnpm i nova-cache
 ```
 
 ## Usage
 
 ```ts
-import { Nova } from "nova";
-import MemoryStore from 'nova/store/memory';
+import { Nova } from "nova-cache";
+import MemoryStore from 'nova-cache/store/memory';
 
 const memCache = new Nova({
   store: new MemoryStore()
@@ -30,8 +30,8 @@ await memCache.get('key') // returns 'value'
 This library uses [superjson](https://www.npmjs.com/package/superjson) to serialize and deserialize data which solves the problem when you want to store objects that contain Dates, Maps, Sets or other similar data structures that are problematic when using `JSON.stringify`. That means you can do something like
 
 ```ts
-import { Nova } from "nova";
-import FilesystemStore from 'nova/store/filesystem';
+import { Nova } from "nova-cache";
+import FilesystemStore from 'nova-cache/store/filesystem';
 
 const fsCache = new Nova({
   store: new FilesystemStore()

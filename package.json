@@ -1,6 +1,6 @@
 {
   "name": "nova-cache",
-  "version": "1.0.0-beta.2",
+  "version": "1.0.0-beta.3",
   "description": "A universal caching library that can be used in any javascript runtime (e.g. nodejs, browser, bun, deno, etc.)",
   "scripts": {
     "build": "vite build",

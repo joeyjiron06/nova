@@ -50,5 +50,15 @@ export type CacheWrapOptions = {
    * Time to live in milliseconds for each cache entry
    */
   ttl?: number;
+
+  /**
+   * When true, disables caching for this specific call and always invokes the wrapped function.
+   */
   disableCache?: boolean;
+
+  /**
+   * When true, forces a refresh of the cache by invoking the wrapped function and updating the cache entry.
+   * When false, returns the cached value if it exists and is valid, otherwise invokes the wrapped function.
+   */
+  forceRefresh?: boolean;
 };

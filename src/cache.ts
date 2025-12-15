@@ -61,7 +61,7 @@ export class Nova {
 
     const cachedValue = await this.get<V>(key);
 
-    if (cachedValue !== undefined) {
+    if (cachedValue !== undefined && !options?.forceRefresh) {
       return cachedValue;
     }
 

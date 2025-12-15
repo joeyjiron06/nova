@@ -422,5 +422,22 @@ describe("cache", () => {
       expect(retrievedSet?.has("hello")).toBe(true);
       expect(retrievedSet?.size).toBe(5);
     });
+
+    it("should invoke the wrapped function when forceRefresh is true", async () => {
+      const key = "forceRefreshKey";
+      const value = "forceRefreshValue";
+
+      const fn = vi.fn(() => Promise.resolve(value));
+
+      const value1 = await cache.wrap(key, fn, { forceRefresh: true });
+
+      expect(value1).toBe(value);
+
+      const value2 = await cache.wrap(key, fn, { forceRefresh: true });
+
+      expect(value2).toBe(value);
+
+      expect(fn).toHaveBeenCalledTimes(2); //
+    });
   });
 });

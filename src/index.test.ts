@@ -162,6 +162,33 @@ describe("cache", () => {
       expect(fn).toHaveBeenCalledTimes(2);
     });
 
+    it("should call the wrapped function after the ttl expires", async () => {
+      const key = "wrapTtlExpireKey";
+      const ttl = 10; // ms
+
+      const initialValue = "initialValue";
+      const subsequentValue = "subsequentValue";
+      const fn = vi.fn(() => {
+        if (fn.mock.calls.length === 1) {
+          return Promise.resolve(initialValue);
+        }
+        return Promise.resolve(subsequentValue);
+      });
+
+      const getValue = () => cache.wrap(key, fn, { ttl });
+
+      const result1 = await getValue();
+      expect(result1).toBe(initialValue);
+      expect(fn).toHaveBeenCalledTimes(1);
+
+      // Wait for TTL to expire
+      await setTimeout(ttl + 50);
+
+      const result2 = await getValue();
+      expect(result2).toBe(subsequentValue);
+      expect(fn).toHaveBeenCalledTimes(2); // Function should be called again after TTL expires
+    });
+
     it("should return cache metadata", async () => {
       const key1 = "metaKey1";
       const key2 = "metaKey2";
@@ -185,8 +212,14 @@ describe("cache", () => {
             key: key2,
             expiresAt: undefined,
           },
-        ]
+        ],
       );
+    });
+
+    it("should return an empty metadata list when no items are in the cache", async () => {
+      const metadata = await cache.meta();
+
+      expect(metadata).toEqual([]);
     });
 
     it("should handle entries that never expire", async () => {
@@ -320,7 +353,7 @@ describe("cache", () => {
         })),
         config: {
           options: Object.fromEntries(
-            Array.from({ length: 100 }, (_, i) => [`option${i}`, i * 2])
+            Array.from({ length: 100 }, (_, i) => [`option${i}`, i * 2]),
           ),
         },
       };
@@ -356,7 +389,7 @@ describe("cache", () => {
               name: "parent",
             }),
           }),
-        })
+        }),
       );
 
       // Verify circular reference is maintained

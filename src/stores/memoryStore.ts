@@ -2,11 +2,12 @@ import type {
   CacheEntry,
   CacheEntryMeta,
   CacheStore,
+  CacheWrapOptions,
   SetCacheOptions,
 } from "../cache.types";
 
 export default class MemoryStore implements CacheStore {
-  private map: Map<string, CacheEntry<unknown>>;
+  private map: Map<string, CacheEntry<Promise<unknown>>>;
 
   constructor() {
     this.map = new Map();
@@ -19,18 +20,29 @@ export default class MemoryStore implements CacheStore {
   async set<V>(
     key: string,
     value: V,
-    options?: SetCacheOptions
+    options?: SetCacheOptions,
   ): Promise<void> {
     this.map.set(key, {
       key,
-      value,
+      value: Promise.resolve(value),
       expiresAt: options?.expiresAt,
     });
   }
 
   async get<V>(key: string): Promise<CacheEntry<V> | undefined> {
-    // @ts-expect-error - Type casting issue
-    return this.map.get(key);
+    const promiseEntry = this.map.get(key);
+
+    if (!promiseEntry) {
+      return undefined;
+    }
+
+    const value = await promiseEntry.value;
+
+    return {
+      key,
+      value: value as V,
+      expiresAt: promiseEntry.expiresAt,
+    };
   }
 
   async delete(key: string): Promise<void> {
@@ -53,5 +65,39 @@ export default class MemoryStore implements CacheStore {
       key: entry.key,
       expiresAt: entry.expiresAt,
     };
+  }
+
+  async wrap<V>(
+    key: string,
+    fn: () => Promise<V>,
+    options?: CacheWrapOptions,
+  ): Promise<V> {
+    if (options?.disableCache) {
+      return fn();
+    }
+
+    const cacheEntry = this.map.get(key);
+
+    if (cacheEntry && !this.isExpired(cacheEntry) && !options?.forceRefresh) {
+      return cacheEntry.value as Promise<V>;
+    }
+
+    const newValuePromise = fn();
+
+    this.map.set(key, {
+      key,
+      value: newValuePromise,
+      expiresAt: options?.ttl ? Date.now() + options.ttl : undefined,
+    });
+
+    return newValuePromise;
+  }
+
+  private isExpired(entry: CacheEntry<unknown>): boolean {
+    if (entry.expiresAt === undefined) {
+      return false;
+    }
+
+    return Date.now() > entry.expiresAt;
   }
 }

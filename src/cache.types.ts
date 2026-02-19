@@ -24,6 +24,11 @@ export type CacheStore = {
   delete(key: string): Promise<void>;
   clear(): Promise<void>;
   meta(): Promise<CacheEntryMeta[]>;
+  wrap?<V>(
+    key: string,
+    fn: () => Promise<V>,
+    options?: CacheWrapOptions,
+  ): Promise<V>;
 };
 
 export type CacheEntry<V> = {

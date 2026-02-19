@@ -51,6 +51,7 @@
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^25.0.0",
     "@vitest/coverage-v8": "4.0.15",
+    "@vitest/ui": "4.0.15",
     "eslint": "^9.39.1",
     "globals": "^16.5.0",
     "jiti": "^2.6.1",

@@ -53,8 +53,15 @@ export class Nova {
   async wrap<V>(
     key: string,
     fn: () => Promise<V>,
-    options?: CacheWrapOptions
+    options?: CacheWrapOptions,
   ): Promise<V> {
+    if (this.store.wrap) {
+      return this.store.wrap<V>(key, fn, {
+        ...options,
+        ttl: this.resolveTTL(options?.ttl),
+      });
+    }
+
     if (options?.disableCache) {
       return fn();
     }

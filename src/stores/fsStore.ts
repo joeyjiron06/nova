@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { outputFile, remove } from "fs-extra/esm";
+import { outputFile, remove, pathExists } from "fs-extra/esm";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import superjson from "superjson";
@@ -30,6 +30,12 @@ export default class FsCacheStore implements CacheStore {
   }
 
   async meta(): Promise<CacheEntryMeta[]> {
+    const dirExists = await pathExists(this.basePath);
+
+    if (!dirExists) {
+      return [];
+    }
+
     const allFiles = await readdir(this.basePath);
     const metaFiles = allFiles.filter((file) => file.endsWith(".meta.json"));
 
@@ -37,7 +43,7 @@ export default class FsCacheStore implements CacheStore {
       metaFiles.map(async (filename) => {
         const buffer = await readFile(path.join(this.basePath, filename));
         return superjson.parse<CacheEntryMeta>(buffer.toString());
-      })
+      }),
     );
   }
 
@@ -77,7 +83,7 @@ export default class FsCacheStore implements CacheStore {
   async set<V>(
     key: string,
     value: V,
-    options?: SetCacheOptions
+    options?: SetCacheOptions,
   ): Promise<void> {
     const paths = this.getPaths(key);
 

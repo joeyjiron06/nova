@@ -10,6 +10,7 @@ import { buttonVariants } from "fumadocs-ui/components/ui/button";
 import { createHomeLayout } from "fumapress/layouts/home";
 import { StoreToggle } from "../components/store-toggle";
 import FaultyTerminal from "../components/faulty-terminal";
+import { AsciiTopography } from "../components/ascii-topography";
 
 const HomeLayout = createHomeLayout({
   layoutProps: {
@@ -229,41 +230,41 @@ function Hero() {
       </div>
       <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-6 py-20 lg:grid-cols-2 lg:gap-16">
         <div className="flex flex-col items-start gap-6">
-        <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-5xl">
-          A <span className="font-light italic">tiny</span> JavaScript cache
-          that runs anywhere
-        </h1>
-        <p className="text-fd-muted-foreground max-w-lg text-lg text-pretty">
-          <code className="font-mono text-[0.9em]">get</code>,{" "}
-          <code className="font-mono text-[0.9em]">set</code>, and TTL that
-          behave the same in Node, the browser, Bun, and Deno. Memory,
-          filesystem, IndexedDB — or write your own store in an afternoon.
-        </p>
-        <div className="flex flex-wrap items-center gap-3">
-          <a
-            href="/docs"
-            className={buttonVariants({
-              variant: "primary",
-              className: "px-5 py-2.5",
-            })}
-          >
-            Get started
-          </a>
-          <a
-            href="https://github.com/joeyjiron/nova"
-            className={buttonVariants({
-              variant: "outline",
-              className: "px-5 py-2.5",
-            })}
-          >
-            View on GitHub
-          </a>
+          <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-5xl">
+            A <span className="font-light italic">tiny</span> JavaScript cache
+            that runs anywhere
+          </h1>
+          <p className="text-fd-muted-foreground max-w-lg text-lg text-pretty">
+            <code className="font-mono text-[0.9em]">get</code>,{" "}
+            <code className="font-mono text-[0.9em]">set</code>, and TTL that
+            behave the same in Node, the browser, Bun, and Deno. Memory,
+            filesystem, IndexedDB — or write your own store in an afternoon.
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <a
+              href="/docs"
+              className={buttonVariants({
+                variant: "primary",
+                className: "px-5 py-2.5",
+              })}
+            >
+              Get started
+            </a>
+            <a
+              href="https://github.com/joeyjiron/nova"
+              className={buttonVariants({
+                variant: "outline",
+                className: "px-5 py-2.5",
+              })}
+            >
+              View on GitHub
+            </a>
+          </div>
+          <InstallTabs />
         </div>
-        <InstallTabs />
-      </div>
-      <div className="flex justify-center lg:justify-end">
-        <StoreSwapCode />
-      </div>
+        <div className="flex justify-center lg:justify-end">
+          <StoreSwapCode />
+        </div>
       </div>
     </section>
   );
@@ -613,14 +614,24 @@ const branches = [
     path: "M200 54 V140",
     dash: "5 4",
     seconds: 2.6,
-    node: { x: 140, label: "Filesystem", library: "Library B", ttl: "ttl: 60000" },
+    node: {
+      x: 140,
+      label: "Filesystem",
+      library: "Library B",
+      ttl: "ttl: 60000",
+    },
   },
   {
     // elbow right, lands on the right node at x=335
     path: "M250 54 V80 Q250 90 260 90 H325 Q335 90 335 100 V140",
     dash: "2 3",
     seconds: 4.2,
-    node: { x: 275, label: "IndexedDB", library: "Library C", ttl: "expiresAt" },
+    node: {
+      x: 275,
+      label: "IndexedDB",
+      library: "Library C",
+      ttl: "expiresAt",
+    },
   },
 ];
 
@@ -786,8 +797,9 @@ function SolutionSection() {
         <figure className="order-last flex flex-col items-center gap-5 lg:order-first lg:items-start">
           <StoreToggle />
           <figcaption className="text-fd-muted-foreground text-center text-sm text-pretty lg:text-left">
-            Flip the store. The <code className="font-mono text-[0.9em]">get</code>{" "}
-            and <code className="font-mono text-[0.9em]">set</code> calls never
+            Flip the store. The{" "}
+            <code className="font-mono text-[0.9em]">get</code> and{" "}
+            <code className="font-mono text-[0.9em]">set</code> calls never
             move.
           </figcaption>
         </figure>
@@ -852,8 +864,9 @@ function StepCard({
   const animated = typeof index === "number";
   return (
     <div
-      className={`w-full rounded-lg border px-3 py-2 text-center font-mono text-xs ${animated ? "nova-step" : "bg-fd-card text-fd-foreground"
-        } ${className}`}
+      className={`w-full rounded-lg border px-3 py-2 text-center font-mono text-xs ${
+        animated ? "nova-step" : "bg-fd-card text-fd-foreground"
+      } ${className}`}
       style={
         animated
           ? { animationDelay: `${(index! / NOVA_WRAP_STEPS) * WRAP_CYCLE}s` }
@@ -941,13 +954,7 @@ function WrapCode() {
   );
 }
 
-function EscapeHatch({
-  option,
-  desc,
-}: {
-  option: string;
-  desc: string;
-}) {
+function EscapeHatch({ option, desc }: { option: string; desc: string }) {
   return (
     <div className="bg-fd-card flex flex-col gap-1.5 rounded-lg border p-3">
       <code className="font-mono text-xs">
@@ -957,7 +964,9 @@ function EscapeHatch({
         <span className={tok.kw}>true</span>
         <span className="text-fd-muted-foreground">{" }"})</span>
       </code>
-      <span className="text-fd-muted-foreground text-xs text-pretty">{desc}</span>
+      <span className="text-fd-muted-foreground text-xs text-pretty">
+        {desc}
+      </span>
     </div>
   );
 }
@@ -1084,12 +1093,14 @@ function TtlCode() {
           <span>
             <span className={tok.kw}>const</span>{" "}
             <span className={tok.plain}>cache =</span>{" "}
-            <span className={tok.kw}>new</span> <span className={tok.fn}>Nova</span>
+            <span className={tok.kw}>new</span>{" "}
+            <span className={tok.fn}>Nova</span>
             <span className={tok.plain}>({"{"}</span>
           </span>
           <span>
             <span className={tok.plain}>{"  "}store:</span>{" "}
-            <span className={tok.kw}>new</span> <span className={tok.fn}>MemoryStore</span>
+            <span className={tok.kw}>new</span>{" "}
+            <span className={tok.fn}>MemoryStore</span>
             <span className={tok.plain}>(),</span>
           </span>
           <span>
@@ -1162,8 +1173,8 @@ function TtlSection() {
           <p className="text-fd-muted-foreground max-w-lg text-pretty">
             Set a default TTL once and Nova applies it to everything you cache.
             Override it when an entry needs a different lifetime — or set it to{" "}
-            <code className="font-mono text-[0.9em]">0</code> when it should never
-            expire.
+            <code className="font-mono text-[0.9em]">0</code> when it should
+            never expire.
           </p>
           <TtlCode />
         </div>
@@ -1187,21 +1198,50 @@ const compareLibs = ["lru-cache", "Keyv", "cache-manager", "node-cache"];
 const compareRows: { label: string; nova: Cell; others: Cell[] }[] = [
   { label: "Node.js", nova: "yes", others: ["yes", "yes", "yes", "yes"] },
   { label: "Browser", nova: "yes", others: ["yes", "no", "no", "no"] },
-  { label: "Other JS runtimes", nova: "yes", others: ["Partial", "Best effort", "no", "no"] },
-  { label: "Pluggable storage", nova: "yes", others: ["no", "yes", "yes", "no"] },
+  {
+    label: "Other JS runtimes",
+    nova: "yes",
+    others: ["Partial", "Best effort", "no", "no"],
+  },
+  {
+    label: "Pluggable storage",
+    nova: "yes",
+    others: ["no", "yes", "yes", "no"],
+  },
   { label: "Built-in TTL", nova: "yes", others: ["yes", "yes", "yes", "yes"] },
   { label: "Per-entry TTL", nova: "yes", others: ["yes", "yes", "yes", "yes"] },
-  { label: "wrap() async functions", nova: "yes", others: ["no", "no", "yes", "no"] },
-  { label: "Filesystem storage", nova: "yes", others: ["no", "Adapter", "Adapter", "no"] },
+  {
+    label: "wrap() async functions",
+    nova: "yes",
+    others: ["no", "no", "yes", "no"],
+  },
+  {
+    label: "Filesystem storage",
+    nova: "yes",
+    others: ["no", "Adapter", "Adapter", "no"],
+  },
   {
     label: "Primary focus",
     nova: "Cross-runtime cache abstraction",
-    others: ["In-memory LRU", "Key-value storage", "Node.js cache manager", "Node.js memory cache"],
+    others: [
+      "In-memory LRU",
+      "Key-value storage",
+      "Node.js cache manager",
+      "Node.js memory cache",
+    ],
   },
 ];
 
 const checkIcon = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className="size-4">
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2.5}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="size-4"
+  >
     <path d="M20 6 9 17l-5-5" />
   </svg>
 );
@@ -1217,10 +1257,16 @@ function CompareCell({ value, emphasis }: { value: Cell; emphasis?: boolean }) {
     );
   }
   if (value === "no") {
-    return <span aria-label="no" className="text-fd-muted-foreground/50">—</span>;
+    return (
+      <span aria-label="no" className="text-fd-muted-foreground/50">
+        —
+      </span>
+    );
   }
   return (
-    <span className={`text-xs ${emphasis ? "text-fd-foreground font-medium" : "text-fd-muted-foreground"}`}>
+    <span
+      className={`text-xs ${emphasis ? "text-fd-foreground font-medium" : "text-fd-muted-foreground"}`}
+    >
       {value}
     </span>
   );
@@ -1251,7 +1297,10 @@ function ComparisonSection() {
                   <span className="text-fd-info font-semibold">nova-cache</span>
                 </th>
                 {compareLibs.map((lib) => (
-                  <th key={lib} className="text-fd-muted-foreground px-4 py-3 text-center font-mono text-xs font-medium">
+                  <th
+                    key={lib}
+                    className="text-fd-muted-foreground px-4 py-3 text-center font-mono text-xs font-medium"
+                  >
                     {lib}
                   </th>
                 ))}
@@ -1262,7 +1311,10 @@ function ComparisonSection() {
                 const last = ri === compareRows.length - 1;
                 return (
                   <tr key={row.label} className="border-fd-border border-b">
-                    <th scope="row" className="px-3 py-3 text-left font-medium whitespace-nowrap">
+                    <th
+                      scope="row"
+                      className="px-3 py-3 text-left font-medium whitespace-nowrap"
+                    >
                       {row.label}
                     </th>
                     <td
@@ -1271,7 +1323,10 @@ function ComparisonSection() {
                       <CompareCell value={row.nova} emphasis />
                     </td>
                     {row.others.map((cell, i) => (
-                      <td key={compareLibs[i]} className="px-4 py-3 text-center">
+                      <td
+                        key={compareLibs[i]}
+                        className="px-4 py-3 text-center"
+                      >
                         <CompareCell value={cell} />
                       </td>
                     ))}
@@ -1310,8 +1365,32 @@ function ComparisonSection() {
 
 function InstallCta() {
   return (
-    <section className="border-fd-border border-t">
-      <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-6 px-6 py-20 text-center sm:py-24">
+    <section className="border-fd-border relative isolate overflow-hidden border-t">
+      {/* Decorative ASCII topography. Purely atmospheric — a vertical alpha
+          mask (not a colour overlay) feathers it into the page at both edges,
+          so the copy stays legible and no grey band appears in light mode.
+          It's dialled back further in light mode, where the artwork's
+          near-black ink would otherwise fight the page. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 [mask-image:linear-gradient(to_bottom,transparent_0%,black_30%,black_70%,transparent_100%)]"
+      >
+        {/* <Image
+          src={asciiWaves}
+          alt=""
+          width={ASCII_WAVES.width}
+          height={ASCII_WAVES.height}
+          sizes="100vw"
+          loading="lazy"
+          decoding="async"
+          preload={false}
+          className="size-full object-cover opacity-20 dark:opacity-60"
+        /> */}
+
+        <AsciiTopography />
+      </div>
+
+      <div className="relative mx-auto flex w-full max-w-6xl flex-col items-center gap-6 px-6 py-20 text-center sm:py-24">
         <h2 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
           Start caching.
         </h2>

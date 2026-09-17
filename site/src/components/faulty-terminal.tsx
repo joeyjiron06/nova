@@ -11,8 +11,7 @@ import "./faulty-terminal.css";
 
 type Vec2 = [number, number];
 
-export interface FaultyTerminalProps
-  extends React.HTMLAttributes<HTMLDivElement> {
+export interface FaultyTerminalProps extends React.HTMLAttributes<HTMLDivElement> {
   scale?: number;
   gridMul?: Vec2;
   digitSize?: number;
@@ -466,7 +465,7 @@ export default function FaultyTerminal({
   return (
     <div
       ref={containerRef}
-      className={`faulty-terminal-container ${className ?? ""}`}
+      className={`faulty-terminal-container rounded-3xl [corner-shape:squircle] ${className ?? ""}`}
       style={style}
       {...rest}
     />

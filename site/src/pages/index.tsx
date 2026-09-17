@@ -8,6 +8,7 @@ import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 import { ServerCodeBlock } from "fumadocs-ui/components/codeblock.rsc";
 import { buttonVariants } from "fumadocs-ui/components/ui/button";
 import { createHomeLayout } from "fumapress/layouts/home";
+import { StoreToggle } from "../components/store-toggle";
 
 const HomeLayout = createHomeLayout({
   layoutProps: {
@@ -745,6 +746,643 @@ function ProblemSection() {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Section 5 — The Solution
+//
+// Instead of another node-and-connector diagram (Section 4 already owns that
+// shape), the argument is made with a segmented control wired to a code panel:
+// clicking a store swaps *only* the `store:` line below — the set/get calls
+// never move. That's the one interactive island on the page; see
+// components/store-toggle.tsx.
+// ---------------------------------------------------------------------------
+
+function SolutionSection() {
+  return (
+    <section className="border-fd-border border-t">
+      <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-6 py-16 sm:py-20 lg:grid-cols-2 lg:gap-16">
+        <figure className="order-last flex flex-col items-center gap-5 lg:order-first lg:items-start">
+          <StoreToggle />
+          <figcaption className="text-fd-muted-foreground text-center text-sm text-pretty lg:text-left">
+            Flip the store. The <code className="font-mono text-[0.9em]">get</code>{" "}
+            and <code className="font-mono text-[0.9em]">set</code> calls never
+            move.
+          </figcaption>
+        </figure>
+
+        <div className="flex flex-col items-start gap-5">
+          <h2 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
+            One cache API. Any storage.
+          </h2>
+          <p className="text-fd-muted-foreground max-w-lg text-pretty">
+            Nova separates your caching logic from where the data lives. Use the
+            same API whether you&rsquo;re caching in memory, on the filesystem,
+            in IndexedDB, or in your own store — storage is just an
+            implementation detail.
+          </p>
+          <p className="max-w-lg font-medium text-pretty">
+            Change where your cache lives. Not how you use it.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Section 6 — wrap()
+//
+// The visual is a two-lane flow, not another SVG node graph: a cache HIT is a
+// single step (return the cached value), while a MISS is the three steps Nova
+// runs *for you* — run → store → return. The miss lane's steps light up in
+// sequence (pure CSS, staggered delays) so the flow Nova automates is obvious.
+// ---------------------------------------------------------------------------
+
+const NOVA_WRAP_STEPS = 3;
+const WRAP_CYCLE = 3.6; // seconds for one run → store → return sweep
+
+const wrapCss = `
+@keyframes nova-step {
+  0%, 12%  { border-color: var(--color-fd-border); color: var(--color-fd-muted-foreground); background-color: var(--color-fd-card); }
+  18%, 30% { border-color: var(--color-fd-info); color: var(--color-fd-foreground); background-color: var(--color-fd-accent); }
+  40%, 100% { border-color: var(--color-fd-border); color: var(--color-fd-muted-foreground); background-color: var(--color-fd-card); }
+}
+.nova-step { animation: nova-step ${WRAP_CYCLE}s linear infinite; }
+.nova-flow:hover .nova-step { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .nova-step { animation: none; }
+}
+`;
+
+function Connector() {
+  return <span aria-hidden className="bg-fd-border h-4 w-px" />;
+}
+
+function StepCard({
+  children,
+  index,
+  className = "",
+}: {
+  children: React.ReactNode;
+  index?: number;
+  className?: string;
+}) {
+  const animated = typeof index === "number";
+  return (
+    <div
+      className={`w-full rounded-lg border px-3 py-2 text-center font-mono text-xs ${
+        animated ? "nova-step" : "bg-fd-card text-fd-foreground"
+      } ${className}`}
+      style={
+        animated
+          ? { animationDelay: `${(index! / NOVA_WRAP_STEPS) * WRAP_CYCLE}s` }
+          : undefined
+      }
+    >
+      {children}
+    </div>
+  );
+}
+
+function WrapFlow() {
+  return (
+    <div
+      className="nova-flow flex w-full max-w-md flex-col items-center"
+      role="img"
+      aria-label="cache.wrap branches on the cache. A hit returns the stored value in one step; a miss runs the function, stores the result, then returns it — three steps Nova handles for you."
+    >
+      {/* the call */}
+      <div className="bg-fd-info text-fd-background rounded-lg px-4 py-2 font-mono text-sm font-medium">
+        cache.wrap(key, fn)
+      </div>
+      <Connector />
+
+      {/* the branch */}
+      <div className="grid w-full grid-cols-2 gap-4">
+        {/* HIT — one step */}
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-fd-success bg-fd-success/10 border-fd-success/30 rounded-full border px-2.5 py-0.5 text-xs font-semibold">
+            cache hit
+          </span>
+          <Connector />
+          <StepCard className="border-fd-success/40 text-fd-foreground!">
+            return cached value
+          </StepCard>
+        </div>
+
+        {/* MISS — the three steps Nova runs for you */}
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-fd-warning bg-fd-warning/10 border-fd-warning/30 rounded-full border px-2.5 py-0.5 text-xs font-semibold">
+            cache miss
+          </span>
+          <Connector />
+          <StepCard index={0}>run function</StepCard>
+          <Connector />
+          <StepCard index={1}>store result</StepCard>
+          <Connector />
+          <StepCard index={2}>return value</StepCard>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WrapCode() {
+  return (
+    <figure className="bg-fd-card w-full max-w-lg overflow-hidden rounded-xl border shadow-sm">
+      <figcaption className="text-fd-muted-foreground flex h-9.5 items-center border-b px-4">
+        <span className="font-mono text-xs">user.ts</span>
+      </figcaption>
+      <pre className="overflow-x-auto p-4 font-mono text-[13px] leading-6">
+        <code className="grid">
+          <span>
+            <span className={tok.comment}>
+              {"// hit → cached value; miss → run, store, return"}
+            </span>
+          </span>
+          <span>
+            <span className={tok.kw}>const</span>{" "}
+            <span className={tok.plain}>user =</span>{" "}
+            <span className={tok.kw}>await</span>{" "}
+            <span className={tok.plain}>cache.</span>
+            <span className={tok.fn}>wrap</span>
+            <span className={tok.plain}>(</span>
+            <span className={tok.str}>&quot;user:123&quot;</span>
+            <span className={tok.plain}>, () =&gt; </span>
+            <span className={tok.fn}>fetchUser</span>
+            <span className={tok.plain}>(</span>
+            <span className={tok.str}>&quot;123&quot;</span>
+            <span className={tok.plain}>));</span>
+          </span>
+        </code>
+      </pre>
+    </figure>
+  );
+}
+
+function EscapeHatch({
+  option,
+  desc,
+}: {
+  option: string;
+  desc: string;
+}) {
+  return (
+    <div className="bg-fd-card flex flex-col gap-1.5 rounded-lg border p-3">
+      <code className="font-mono text-xs">
+        <span className="text-fd-muted-foreground">wrap(key, fn, {"{ "}</span>
+        <span className={tok.fn}>{option}</span>
+        <span className="text-fd-muted-foreground">: </span>
+        <span className={tok.kw}>true</span>
+        <span className="text-fd-muted-foreground">{" }"})</span>
+      </code>
+      <span className="text-fd-muted-foreground text-xs text-pretty">{desc}</span>
+    </div>
+  );
+}
+
+function WrapSection() {
+  return (
+    <section className="border-fd-border border-t">
+      <style>{wrapCss}</style>
+      <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-6 py-16 sm:py-20 lg:grid-cols-2 lg:gap-16">
+        <div className="flex flex-col items-start gap-5">
+          <h2 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
+            Memoize the expensive stuff.
+          </h2>
+          <p className="text-fd-muted-foreground max-w-lg text-pretty">
+            Wrap an expensive operation and Nova handles the rest. On a cache
+            hit, you get the stored result. On a miss, Nova runs the function,
+            stores the result, and returns it.
+          </p>
+          <WrapCode />
+          <div className="grid w-full max-w-lg gap-3 sm:grid-cols-2">
+            <EscapeHatch
+              option="forceRefresh"
+              desc="Run the function and refresh the cached value."
+            />
+            <EscapeHatch
+              option="disableCache"
+              desc="Bypass caching entirely — just run the function."
+            />
+          </div>
+        </div>
+
+        <figure className="flex flex-col items-center gap-5">
+          <WrapFlow />
+          <figcaption className="text-fd-muted-foreground text-center text-sm text-pretty">
+            No manual check, run, store, return. One call covers both paths.
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Section 7 — TTL
+//
+// Visual: one default TTL at the top feeding a list of entries. Most rows just
+// inherit the default (muted, same value); the two overrides stand out in
+// their own colors — a custom lifetime and a never-expires ∞. The design makes
+// "configure the common case once, override per-entry" legible at a glance.
+// No animation needed here; the contrast carries it.
+// ---------------------------------------------------------------------------
+
+type TtlRow = {
+  key: string;
+  value: string;
+  kind: "inherit" | "override" | "forever";
+};
+
+const ttlRows: TtlRow[] = [
+  { key: "user:123", value: "60s", kind: "inherit" },
+  { key: "posts:123", value: "60s", kind: "inherit" },
+  { key: "weather", value: "60s", kind: "inherit" },
+  { key: "config", value: "1 hour", kind: "override" },
+  { key: "static-data", value: "∞", kind: "forever" },
+];
+
+const ttlBadge: Record<TtlRow["kind"], string> = {
+  inherit: "text-fd-muted-foreground bg-fd-muted border-fd-border",
+  override: "text-fd-warning bg-fd-warning/10 border-fd-warning/30",
+  forever: "text-fd-info bg-fd-info/10 border-fd-info/30",
+};
+
+function TtlDiagram() {
+  return (
+    <div
+      className="flex w-full max-w-sm flex-col items-center gap-3"
+      role="img"
+      aria-label="A default TTL of 60 seconds applies to every entry. Individual entries can override it — config lives one hour, static-data never expires."
+    >
+      {/* the default */}
+      <div className="bg-fd-card flex items-center gap-3 rounded-xl border px-5 py-3 shadow-sm">
+        <span className="text-fd-muted-foreground text-xs font-medium tracking-wide uppercase">
+          Default
+        </span>
+        <span className="font-mono text-lg font-semibold">60s</span>
+      </div>
+      <span aria-hidden className="bg-fd-border h-4 w-px" />
+
+      {/* the entries */}
+      <div className="flex w-full flex-col gap-2">
+        {ttlRows.map((row) => (
+          <div
+            key={row.key}
+            className="bg-fd-card flex items-center justify-between gap-3 rounded-lg border px-4 py-2.5"
+          >
+            <code className="font-mono text-xs">{row.key}</code>
+            <span className="flex items-center gap-2">
+              <span
+                className={`rounded-md border px-2 py-0.5 font-mono text-xs font-medium ${ttlBadge[row.kind]}`}
+              >
+                {row.value}
+              </span>
+              {row.kind !== "inherit" && (
+                <span className="text-fd-muted-foreground text-[10px] tracking-wide uppercase">
+                  {row.kind === "forever" ? "never expires" : "override"}
+                </span>
+              )}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TtlCode() {
+  return (
+    <figure className="bg-fd-card w-full max-w-lg overflow-hidden rounded-xl border shadow-sm">
+      <figcaption className="text-fd-muted-foreground flex h-9.5 items-center border-b px-4">
+        <span className="font-mono text-xs">cache.ts</span>
+      </figcaption>
+      <pre className="overflow-x-auto p-4 font-mono text-[13px] leading-6">
+        <code className="grid">
+          <span>
+            <span className={tok.kw}>const</span>{" "}
+            <span className={tok.plain}>cache =</span>{" "}
+            <span className={tok.kw}>new</span> <span className={tok.fn}>Nova</span>
+            <span className={tok.plain}>({"{"}</span>
+          </span>
+          <span>
+            <span className={tok.plain}>{"  "}store:</span>{" "}
+            <span className={tok.kw}>new</span> <span className={tok.fn}>MemoryStore</span>
+            <span className={tok.plain}>(),</span>
+          </span>
+          <span>
+            <span className={tok.plain}>{"  "}ttl:</span>{" "}
+            <span className={tok.num}>60_000</span>
+            <span className={tok.plain}>,</span>{" "}
+            <span className={tok.comment}>{"// default: 1 minute"}</span>
+          </span>
+          <span className={tok.plain}>{"});"}</span>
+          <span>&nbsp;</span>
+          <span>
+            <span className={tok.comment}>{"// inherit the default"}</span>
+          </span>
+          <span>
+            <span className={tok.kw}>await</span>{" "}
+            <span className={tok.plain}>cache.</span>
+            <span className={tok.fn}>set</span>
+            <span className={tok.plain}>(</span>
+            <span className={tok.str}>&quot;user:123&quot;</span>
+            <span className={tok.plain}>, user);</span>
+          </span>
+          <span>&nbsp;</span>
+          <span>
+            <span className={tok.comment}>{"// override per entry"}</span>
+          </span>
+          <span>
+            <span className={tok.kw}>await</span>{" "}
+            <span className={tok.plain}>cache.</span>
+            <span className={tok.fn}>set</span>
+            <span className={tok.plain}>(</span>
+            <span className={tok.str}>&quot;config&quot;</span>
+            <span className={tok.plain}>, config, </span>
+            <span className={tok.num}>60</span>
+            <span className={tok.plain}> * </span>
+            <span className={tok.num}>60_000</span>
+            <span className={tok.plain}>);</span>
+          </span>
+          <span>
+            <span className={tok.kw}>await</span>{" "}
+            <span className={tok.plain}>cache.</span>
+            <span className={tok.fn}>set</span>
+            <span className={tok.plain}>(</span>
+            <span className={tok.str}>&quot;static-data&quot;</span>
+            <span className={tok.plain}>, data, </span>
+            <span className={tok.num}>0</span>
+            <span className={tok.plain}>);</span>{" "}
+            <span className={tok.comment}>{"// never expires"}</span>
+          </span>
+        </code>
+      </pre>
+    </figure>
+  );
+}
+
+function TtlSection() {
+  return (
+    <section className="border-fd-border border-t">
+      <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-6 py-16 sm:py-20 lg:grid-cols-2 lg:gap-16">
+        <figure className="order-last flex flex-col items-center gap-5 lg:order-first">
+          <TtlDiagram />
+          <figcaption className="text-fd-muted-foreground text-center text-sm text-pretty">
+            One default. Per-entry control when you need it.
+          </figcaption>
+        </figure>
+
+        <div className="flex flex-col items-start gap-5">
+          <h2 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
+            Set your TTL once. Override it anywhere.
+          </h2>
+          <p className="text-fd-muted-foreground max-w-lg text-pretty">
+            Set a default TTL once and Nova applies it to everything you cache.
+            Override it when an entry needs a different lifetime — or set it to{" "}
+            <code className="font-mono text-[0.9em]">0</code> when it should never
+            expire.
+          </p>
+          <TtlCode />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Section 8 — Comparison
+//
+// An honest positioning table, not a scoreboard. The point is Nova's tradeoff
+// (cross-runtime API + storage as a detail), not that it beats anything. Nova's
+// column is tinted to anchor the eye; the rest are neutral. No download counts.
+// ---------------------------------------------------------------------------
+
+type Cell = "yes" | "no" | string;
+
+const compareLibs = ["lru-cache", "Keyv", "cache-manager", "node-cache"];
+
+const compareRows: { label: string; nova: Cell; others: Cell[] }[] = [
+  { label: "Node.js", nova: "yes", others: ["yes", "yes", "yes", "yes"] },
+  { label: "Browser", nova: "yes", others: ["yes", "no", "no", "no"] },
+  { label: "Other JS runtimes", nova: "yes", others: ["Partial", "Best effort", "no", "no"] },
+  { label: "Pluggable storage", nova: "yes", others: ["no", "yes", "yes", "no"] },
+  { label: "Built-in TTL", nova: "yes", others: ["yes", "yes", "yes", "yes"] },
+  { label: "Per-entry TTL", nova: "yes", others: ["yes", "yes", "yes", "yes"] },
+  { label: "wrap() async functions", nova: "yes", others: ["no", "no", "yes", "no"] },
+  { label: "Filesystem storage", nova: "yes", others: ["no", "Adapter", "Adapter", "no"] },
+  {
+    label: "Primary focus",
+    nova: "Cross-runtime cache abstraction",
+    others: ["In-memory LRU", "Key-value storage", "Node.js cache manager", "Node.js memory cache"],
+  },
+];
+
+const checkIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className="size-4">
+    <path d="M20 6 9 17l-5-5" />
+  </svg>
+);
+
+function CompareCell({ value, emphasis }: { value: Cell; emphasis?: boolean }) {
+  if (value === "yes") {
+    return (
+      <span className="inline-flex">
+        <span className={emphasis ? "text-fd-info" : "text-fd-success"}>
+          {checkIcon}
+        </span>
+      </span>
+    );
+  }
+  if (value === "no") {
+    return <span aria-label="no" className="text-fd-muted-foreground/50">—</span>;
+  }
+  return (
+    <span className={`text-xs ${emphasis ? "text-fd-foreground font-medium" : "text-fd-muted-foreground"}`}>
+      {value}
+    </span>
+  );
+}
+
+function ComparisonSection() {
+  return (
+    <section className="border-fd-border border-t">
+      <div className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-20">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <h2 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
+            How Nova compares
+          </h2>
+          <p className="text-fd-muted-foreground max-w-2xl text-pretty">
+            There are plenty of great caching libraries for JavaScript. Most are
+            designed around a particular runtime or caching strategy. Nova takes
+            a different approach: one cache API that works across JavaScript
+            runtimes and lets storage remain an implementation detail.
+          </p>
+        </div>
+
+        <div className="mt-12 overflow-x-auto">
+          <table className="w-full min-w-3xl border-collapse text-sm">
+            <thead>
+              <tr className="border-fd-border border-b">
+                <th className="px-3 py-3 text-left font-medium" />
+                <th className="bg-fd-info/5 border-fd-info/20 rounded-t-lg border-x border-t px-4 py-3 text-center">
+                  <span className="text-fd-info font-semibold">nova-cache</span>
+                </th>
+                {compareLibs.map((lib) => (
+                  <th key={lib} className="text-fd-muted-foreground px-4 py-3 text-center font-mono text-xs font-medium">
+                    {lib}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {compareRows.map((row, ri) => {
+                const last = ri === compareRows.length - 1;
+                return (
+                  <tr key={row.label} className="border-fd-border border-b">
+                    <th scope="row" className="px-3 py-3 text-left font-medium whitespace-nowrap">
+                      {row.label}
+                    </th>
+                    <td
+                      className={`bg-fd-info/5 border-fd-info/20 border-x px-4 py-3 text-center ${last ? "rounded-b-lg border-b" : ""}`}
+                    >
+                      <CompareCell value={row.nova} emphasis />
+                    </td>
+                    {row.others.map((cell, i) => (
+                      <td key={compareLibs[i]} className="px-4 py-3 text-center">
+                        <CompareCell value={cell} />
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <p className="text-fd-muted-foreground mt-8 text-center text-sm">
+          Established alternatives, different tradeoffs.
+        </p>
+        <p className="text-fd-muted-foreground mx-auto mt-2 max-w-2xl text-center text-pretty">
+          Nova isn&rsquo;t trying to replace every caching library. It&rsquo;s
+          for when you want the same cache abstraction across Node, browsers,
+          and other JavaScript runtimes.
+        </p>
+
+        <p className="text-fd-muted-foreground/70 mx-auto mt-6 max-w-3xl text-center text-xs text-pretty">
+          * Runtime support reflects each library&rsquo;s primary design. **
+          Best effort via storage adapters. Comparisons describe design focus,
+          not quality — each library is a solid choice for what it targets.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Final Section — Install CTA
+//
+// Deliberately understated. The page already made the argument; this just makes
+// the next step obvious. One install command, two actions, one closing line.
+// ---------------------------------------------------------------------------
+
+function InstallCta() {
+  return (
+    <section className="border-fd-border border-t">
+      <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-6 px-6 py-20 text-center sm:py-24">
+        <h2 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+          Start caching.
+        </h2>
+        <p className="text-fd-muted-foreground max-w-lg text-lg text-pretty">
+          Install Nova and add a cache to your application in a few lines.
+        </p>
+
+        <div className="mx-auto w-full max-w-lg text-left">
+          <InstallTabs />
+        </div>
+
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <a
+            href="https://www.npmjs.com/package/nova-cache"
+            className={buttonVariants({
+              variant: "primary",
+              className: "px-5 py-2.5",
+            })}
+          >
+            Install Nova
+          </a>
+          <a
+            href="https://github.com/joeyjiron/nova"
+            className={buttonVariants({
+              variant: "outline",
+              className: "px-5 py-2.5",
+            })}
+          >
+            View on GitHub
+          </a>
+        </div>
+
+        <p className="text-fd-muted-foreground mt-2 text-sm text-pretty">
+          Open source. Tiny by design. Works anywhere JavaScript runs.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Footer
+// ---------------------------------------------------------------------------
+
+function SiteFooter() {
+  return (
+    <footer className="text-fd-muted-foreground border-t px-6 py-6 text-sm">
+      <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p>
+          &copy; {new Date().getFullYear()}{" "}
+          <a
+            className="underline underline-offset-4"
+            href="https://joeyjiron.com"
+          >
+            Joey Jiron
+          </a>
+          .
+        </p>
+        <nav className="flex items-center gap-4">
+          <a
+            className="hover:text-fd-foreground transition-colors"
+            href="https://github.com/joeyjiron06"
+            aria-label="GitHub"
+          >
+            <svg
+              role="img"
+              viewBox="0 0 24 24"
+              aria-hidden
+              className="size-5 fill-current"
+            >
+              <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+            </svg>
+          </a>
+          <a
+            className="hover:text-fd-foreground transition-colors"
+            href="https://x.com/joeyjiron06"
+            aria-label="X"
+          >
+            <svg
+              role="img"
+              viewBox="0 0 24 24"
+              aria-hidden
+              className="size-5 fill-current"
+            >
+              <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z" />
+            </svg>
+          </a>
+        </nav>
+      </div>
+    </footer>
+  );
+}
+
 export default function HomePage() {
   return (
     <HomeLayout>
@@ -752,6 +1390,12 @@ export default function HomePage() {
       <RuntimeWall />
       <FeatureGrid />
       <ProblemSection />
+      <SolutionSection />
+      <WrapSection />
+      <TtlSection />
+      <ComparisonSection />
+      <InstallCta />
+      <SiteFooter />
     </HomeLayout>
   );
 }

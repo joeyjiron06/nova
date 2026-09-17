@@ -9,6 +9,7 @@ import { ServerCodeBlock } from "fumadocs-ui/components/codeblock.rsc";
 import { buttonVariants } from "fumadocs-ui/components/ui/button";
 import { createHomeLayout } from "fumapress/layouts/home";
 import { StoreToggle } from "../components/store-toggle";
+import FaultyTerminal from "../components/faulty-terminal";
 
 const HomeLayout = createHomeLayout({
   layoutProps: {
@@ -205,8 +206,29 @@ function InstallTabs() {
 
 function Hero() {
   return (
-    <section className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-12 px-6 py-20 lg:grid-cols-2 lg:gap-16">
-      <div className="flex flex-col items-start gap-6">
+    <section className="relative flex-1 overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <FaultyTerminal
+          scale={2}
+          gridMul={[2, 1]}
+          digitSize={1.2}
+          timeScale={0.3}
+          scanlineIntensity={0.5}
+          glitchAmount={1}
+          flickerAmount={1}
+          noiseAmp={1}
+          curvature={0.1}
+          tint="#f97316"
+          mouseReact={false}
+          pageLoadAnimation
+          brightness={0.7}
+        />
+        {/* solid background on the left (behind the copy) fading to reveal the
+            terminal on the right so the hero text stays readable */}
+        <div className="from-fd-background via-fd-background/80 absolute inset-0 bg-gradient-to-r to-transparent" />
+      </div>
+      <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-6 py-20 lg:grid-cols-2 lg:gap-16">
+        <div className="flex flex-col items-start gap-6">
         <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-5xl">
           A <span className="font-light italic">tiny</span> JavaScript cache
           that runs anywhere
@@ -241,6 +263,7 @@ function Hero() {
       </div>
       <div className="flex justify-center lg:justify-end">
         <StoreSwapCode />
+      </div>
       </div>
     </section>
   );
@@ -829,9 +852,8 @@ function StepCard({
   const animated = typeof index === "number";
   return (
     <div
-      className={`w-full rounded-lg border px-3 py-2 text-center font-mono text-xs ${
-        animated ? "nova-step" : "bg-fd-card text-fd-foreground"
-      } ${className}`}
+      className={`w-full rounded-lg border px-3 py-2 text-center font-mono text-xs ${animated ? "nova-step" : "bg-fd-card text-fd-foreground"
+        } ${className}`}
       style={
         animated
           ? { animationDelay: `${(index! / NOVA_WRAP_STEPS) * WRAP_CYCLE}s` }

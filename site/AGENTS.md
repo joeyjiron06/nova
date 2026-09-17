@@ -1,6 +1,6 @@
 # Nova Cache Docs Site
 
-This is the static website for Nova, a tiny cache library that works in any Javascript runtime.
+This is the static website for Nova, a tiny cache library that works in any JavaScript runtime.
 
 This site uses Fumapress framework to build the documentation in React to a static site.
 

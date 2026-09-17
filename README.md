@@ -1,6 +1,6 @@
 <h1 style="display: flex; align-items: center; gap: 0.5rem;"><img src="./logo.png" style="width: 3rem; height: 3rem;"  width="48" height="48" />  nova</h1>
 
-An extremely lightweight utility for caching data. This is an isomorphic library that can be used in any Javascript environment (e.g. NodeJs, Browser, Bun, Deno, etc.). The core caching logic (for things like TTL) is implemented in pure javascript with NO DEPENDENCIES. Each caching layer can be implemented to support multiple environments.
+An extremely lightweight utility for caching data. This is an isomorphic library that can be used in any JavaScript environment (e.g. NodeJs, Browser, Bun, Deno, etc.). The core caching logic (for things like TTL) is implemented in pure JavaScript with NO DEPENDENCIES. Each caching layer can be implemented to support multiple environments.
 
 ## Installation
 
@@ -45,7 +45,7 @@ await fsCache.set('key', {
   items: new Map({ 'key1': 1, 'key2': 2 })
 })
 
-// will return an object with Date and Map javascript objects even though it's saved to the filesystem
+// will return an object with Date and Map JavaScript objects even though it's saved to the filesystem
 await fsCache.get('key')
 ```
 

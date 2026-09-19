@@ -2,10 +2,25 @@ import { defineConfig } from "fumapress";
 import { fumadocsMdx } from "fumapress/adapters/mdx";
 import { metaSchema, pageSchema } from "fumapress/adapters/mdx/schema";
 import { defineDocs } from "fumadocs-mdx/macro";
+import defaultMdxComponents, { createRelativeLink } from "fumadocs-ui/mdx";
+import {
+  createGenerator,
+  createFileSystemGeneratorCache,
+} from "fumadocs-typescript";
+import { AutoTypeTable, type AutoTypeTableProps } from "fumadocs-typescript/ui";
 import NovaLogo from "./src/assets/images/nova.svg?react";
 import { createGlassLayoutPage } from "fumapress/layouts/glass";
 
 const GlassLayout = createGlassLayoutPage<typeof config.$context>();
+
+// Reads the library's real types off disk at build time, so the reference pages
+// cannot drift from `src/`. Paths in `<AutoTypeTable path="..." />` resolve from
+// this directory, which is why they are written as `../src/...`.
+const typeGenerator = createGenerator({
+  cache: createFileSystemGeneratorCache(
+    "node_modules/.cache/fumadocs-typescript",
+  ),
+});
 
 const docs = defineDocs({
   dir: "content",
@@ -65,6 +80,20 @@ const config = defineConfig({
       );
     },
   },
-}).adapters(fumadocsMdx());
+}).adapters(
+  fumadocsMdx({
+    // Overriding this replaces the adapter's default, so the defaults it sets
+    // up (Markdown elements, Card, Callout, relative links) are repeated here.
+    async getMdxComponents(page) {
+      return {
+        ...defaultMdxComponents,
+        a: createRelativeLink(await this.getLoader(), page),
+        AutoTypeTable: (props: Partial<AutoTypeTableProps>) => (
+          <AutoTypeTable {...props} generator={typeGenerator} />
+        ),
+      };
+    },
+  }),
+);
 
 export default config;

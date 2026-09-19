@@ -51,7 +51,7 @@ The practical result is that switching storage is a one-line change:
 const cache = new Nova({ store: new MemoryStore(), ttl: 60_000 });
 
 // On the server, when the cache has to outlive a restart
-const cache = new Nova({ store: new FilesystemStore("./.cache"), ttl: 60_000 });
+const cache = new Nova({ store: new FileSystemStore("./.cache"), ttl: 60_000 });
 ```
 
 Every `get`, `set`, `has`, and `wrap` call around it stays exactly the same.

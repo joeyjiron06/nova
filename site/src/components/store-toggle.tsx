@@ -16,7 +16,7 @@ const tok = {
 
 const stores = [
   { seg: "Memory", ctor: "MemoryStore", arg: "" },
-  { seg: "Filesystem", ctor: "FilesystemStore", arg: '"./cache"' },
+  { seg: "Filesystem", ctor: "FileSystemStore", arg: '"./cache"' },
   { seg: "IndexedDB", ctor: "IndexedDBStore", arg: "" },
 ];
 // widest store line — invisible placeholder that reserves the row width

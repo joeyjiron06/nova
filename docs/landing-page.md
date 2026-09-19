@@ -109,7 +109,7 @@ Then demonstrate changing only the store:
 
 ```ts
 const cache = new Nova({
-  store: new FilesystemStore("./cache"),
+  store: new FileSystemStore("./cache"),
 });
 ```
 

@@ -1,0 +1,110 @@
+---
+title: FileSystemStore
+description: Keeps entries as files on disk, so they survive a restart and can be read by any process that can see the directory.
+---
+
+`FileSystemStore` sits between an in-memory cache and a networked one. Entries
+survive a restart, and any process that can see the directory can read them —
+without running a daemon or holding a connection.
+
+```ts
+import Nova from "nova-cache";
+import FileSystemStore from "nova-cache/store/filesystem";
+
+const cache = new Nova({
+  store: new FileSystemStore("./.cache"),
+  ttl: 60_000,
+});
+```
+
+<Callout type="warn" title="Node only">
+  This store reads and writes the filesystem, so it does not run in the browser.
+  Use [`MemoryStore`](/reference/memory-store) there.
+</Callout>
+
+## Constructor
+
+<AutoTypeTable
+  path="../src/stores/fileSystemStore.ts"
+  name="FileSystemStoreOptions"
+  type={`export type FileSystemStoreOptions = {
+  /**
+   * Directory the entries are written to.
+   *
+   * Created on the first write, and removed entirely by \`clear()\`.
+   */
+  basePath: string;
+};`}
+/>
+
+## How entries are stored
+
+Each entry becomes two files, named after the hash of its key:
+
+```text
+.cache/
+  8d777f385d3dfec8815d20f7496026dc.value.json   the cached value
+  8d777f385d3dfec8815d20f7496026dc.meta.json    the key and its expiry
+```
+
+Splitting them is what makes `has()`, `getMeta()` and `meta()` cheap: they read
+the small metadata file and never touch, or deserialize, the value.
+
+Keys are hashed with MD5 before they reach the filesystem, so `user:1` and
+`https://api.example.com/v2/thing` are both valid keys. The hash is for filename
+safety, not security.
+
+## Rich values survive the round trip
+
+Values are serialized with [superjson](https://www.npmjs.com/package/superjson)
+rather than `JSON.stringify`, so what you put in is what you get out.
+
+```ts
+await cache.set("report:2024", {
+  generatedAt: new Date(),
+  totals: new Map([["q1", 1200]]),
+});
+
+const report = await cache.get("report:2024");
+
+report.generatedAt instanceof Date; // true
+report.totals instanceof Map; // true
+```
+
+Anything superjson cannot represent still cannot be stored — functions, class
+instances, DOM nodes. Use [`MemoryStore`](/reference/memory-store) for those.
+
+## Methods
+
+`FileSystemStore` implements [`CacheStore`](/reference/cache-store) exactly.
+
+<AutoTypeTable
+  path="../src/stores/fileSystemStore.ts"
+  name="FileSystemStoreApi"
+  type={`import type FileSystemStore from "./fileSystemStore";
+export type FileSystemStoreApi = Pick<FileSystemStore, keyof FileSystemStore>;`}
+/>
+
+It also exposes one static helper, so you can find the files for a key yourself:
+
+<AutoTypeTable
+  path="../src/stores/fileSystemStore.ts"
+  name="FileSystemStoreStatics"
+  type={`export type FileSystemStoreStatics = {
+  /**
+   * Hashes a cache key into the filename-safe string used on disk.
+   */
+  hashKey: (key: string) => string;
+};`}
+/>
+
+<Callout type="warn" title="Nothing is encrypted">
+  Entries sit on disk as plain files for as long as the file survives, which
+  outlives both the TTL and the process. Do not put credentials here.
+</Callout>
+
+## Related
+
+- [`CacheStore`](/reference/cache-store) — the contract this implements.
+- [`MemoryStore`](/reference/memory-store) — the same contract, in-process and unserialized.
+- [Filesystem caching](/recipes/filesystem-caching) — the walkthrough version of this page.

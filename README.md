@@ -29,10 +29,10 @@ This library uses [superjson](https://www.npmjs.com/package/superjson) to serial
 
 ```ts
 import Nova from "nova-cache";
-import FilesystemStore from 'nova-cache/store/filesystem';
+import FileSystemStore from 'nova-cache/store/filesystem';
 
 const fsCache = new Nova({
-  store: new FilesystemStore('./.cache'),
+  store: new FileSystemStore('./.cache'),
   ttl: 60_000, // default TTL in milliseconds
 });
 

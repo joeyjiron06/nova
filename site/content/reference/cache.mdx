@@ -1,0 +1,91 @@
+---
+title: Cache
+description: The interface every Nova cache implements. It owns expiry, so the rules stay the same whichever store you plug in.
+---
+
+`Cache` is the only interface you call directly. `Nova`, the default export of
+`nova-cache`, is the one implementation of it.
+
+The split matters: `Cache` decides **when** an entry is too old, and a
+[`CacheStore`](/reference/cache-store) decides **where** entries are kept. Because
+expiry never moves into the store, a memory cache and a filesystem cache expire
+entries identically, and you can swap one for the other without touching your
+calling code.
+
+```ts
+import Nova from "nova-cache";
+import MemoryStore from "nova-cache/store/memory";
+
+const cache: Cache = new Nova({
+  store: new MemoryStore(),
+  ttl: 60_000,
+});
+```
+
+## Methods
+
+Every method returns a promise, including the in-memory ones. That is what lets
+you change stores later without rewriting call sites.
+
+<AutoTypeTable path="../src/cache.types.ts" name="Cache" />
+
+<Callout type="info" title="Reads clean up after themselves">
+  `get` deletes an entry it finds expired before returning `undefined`. `meta`
+  does not, so an expired entry stays listed until something reads or clears it.
+</Callout>
+
+## Constructor options
+
+`CacheOptions` is what you hand to `new Nova(...)`. The store is required; the
+TTL is not.
+
+<AutoTypeTable path="../src/cache.types.ts" name="CacheOptions" />
+
+Leaving `ttl` out, or setting it to `0`, means entries live until something
+deletes them. You can change the default later with `setDefaultTTL`, which only
+affects entries written from that point on.
+
+## Caching a function with `wrap`
+
+`wrap` is the read-through helper: it returns the cached value, or runs your
+function and caches what comes back.
+
+```ts
+const user = await cache.wrap("user:1", async () => {
+  return fetchUser(1);
+});
+```
+
+Concurrent calls for the same key share a single run of the function, so a cold
+cache under load still only does the work once.
+
+### CacheWrapOptions
+
+Passed as the third argument to `wrap` to override how that one call behaves.
+
+<AutoTypeTable path="../src/cache.types.ts" name="CacheWrapOptions" />
+
+### WrapEntry
+
+Handed to your function so it can set the TTL **after** it knows what the TTL
+should be. This is the case that a plain `ttl` argument cannot cover: an API
+response that tells you how long it is valid for.
+
+<AutoTypeTable path="../src/cache.types.ts" name="WrapEntry" />
+
+```ts
+const token = await cache.wrap("token", async (entry) => {
+  const res = await getToken();
+  entry.setTTL(res.expires_in * 1000);
+  return res.access_token;
+});
+```
+
+`setTTL` beats the `ttl` passed to `wrap`, which beats the cache default. The
+last call to `setTTL` wins, and it does nothing when `wrap` was called with
+`disableCache`, because nothing is stored.
+
+## Related
+
+- [`CacheStore`](/reference/cache-store) — the storage contract behind a cache.
+- [`CacheEntryMeta`](/reference/cache-entry-meta) — what `meta()` returns.

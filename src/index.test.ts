@@ -4,7 +4,7 @@ import path from "path";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { Nova } from "./cache";
 import type { WrapEntry } from "./cache.types";
-import FsStore from "./stores/fsStore";
+import FileSystemStore from "./stores/fileSystemStore";
 import MemoryStore from "./stores/memoryStore";
 
 const memCache = new Nova({
@@ -14,7 +14,7 @@ const memCache = new Nova({
 const fsCachePath = path.join(os.tmpdir(), "cache-test");
 
 const fsCache = new Nova({
-  store: new FsStore(fsCachePath),
+  store: new FileSystemStore(fsCachePath),
 });
 
 // removes the fs cache directory after all tests are done

@@ -21,8 +21,8 @@
       "default": "./dist/stores/memoryStore.js"
     },
     "./store/filesystem": {
-      "types": "./dist/stores/fsStore.d.ts",
-      "default": "./dist/stores/fsStore.js"
+      "types": "./dist/stores/fileSystemStore.d.ts",
+      "default": "./dist/stores/fileSystemStore.js"
     },
     "./package.json": "./package.json"
   },

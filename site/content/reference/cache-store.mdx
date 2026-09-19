@@ -1,0 +1,77 @@
+---
+title: CacheStore
+description: The storage contract behind a cache. Implement it to keep entries anywhere you like.
+---
+
+A `CacheStore` is the storage half of Nova. It reads and writes entries and does
+nothing else. In particular, it never decides whether an entry has expired —
+[`Cache`](/reference/cache) does that — which is why every store expires entries
+the same way.
+
+Nova ships two implementations, and the interface is small enough that writing a
+third is a short afternoon:
+
+- [`MemoryStore`](/reference/memory-store) — a `Map` in the current process.
+- [`FileSystemStore`](/reference/file-system-store) — files on disk.
+
+## Methods
+
+<AutoTypeTable path="../src/cache.types.ts" name="CacheStore" />
+
+<Callout type="warn" title="Stores return expired entries">
+  `get` and `getMeta` hand back whatever is stored, expired or not. That is
+  deliberate: if stores filtered by expiry, each one would need its own clock and
+  its own rules. Leave the decision to the cache.
+</Callout>
+
+## Writing your own store
+
+Implement the six methods and you have a store. The contract is:
+
+1. `set` overwrites any existing entry for the key.
+2. `get` returns `undefined` only when nothing is stored for the key.
+3. `getMeta` and `meta` must not read or deserialize values. That is the whole
+   reason they exist — `has()` and cache inspection stay cheap.
+4. `expiresAt` is stored verbatim. Never interpret it.
+
+```ts
+import type {
+  CacheEntry,
+  CacheEntryMeta,
+  CacheStore,
+  SetCacheOptions,
+} from "nova-cache";
+
+export default class MyStore implements CacheStore {
+  async set<V>(key: string, value: V, options?: SetCacheOptions) {
+    /* ... */
+  }
+  async get<V>(key: string): Promise<CacheEntry<V> | undefined> {
+    /* ... */
+  }
+  async getMeta(key: string): Promise<CacheEntryMeta | undefined> {
+    /* ... */
+  }
+  async delete(key: string) {
+    /* ... */
+  }
+  async clear() {
+    /* ... */
+  }
+  async meta(): Promise<CacheEntryMeta[]> {
+    /* ... */
+  }
+}
+```
+
+Anything that serializes — Redis, IndexedDB, SQLite — has to decide how values
+survive the round trip. `JSON.stringify` quietly turns a `Date` into a string and
+a `Map` into `{}`. `FileSystemStore` uses
+[superjson](https://www.npmjs.com/package/superjson) to avoid that, and yours
+probably should too.
+
+## Related
+
+- [`CacheEntry`](/reference/cache-entry) — what `get` returns.
+- [`CacheEntryMeta`](/reference/cache-entry-meta) — what `getMeta` and `meta` return.
+- [`SetCacheOptions`](/reference/set-cache-options) — what `set` receives.

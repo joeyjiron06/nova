@@ -1,0 +1,14 @@
+{
+  "title": "Reference",
+  "pages": [
+    "cache",
+    "cache-store",
+    "---Stores---",
+    "memory-store",
+    "file-system-store",
+    "---Shared types---",
+    "cache-entry",
+    "cache-entry-meta",
+    "set-cache-options"
+  ]
+}

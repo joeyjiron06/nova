@@ -1,0 +1,63 @@
+---
+title: CacheEntryMeta
+description: A cache entry without its value. Lets you see what is cached, and when it expires, without paying to read the value.
+---
+
+`CacheEntryMeta` is [`CacheEntry`](/reference/cache-entry) with the value removed:
+
+```ts
+type CacheEntryMeta = Omit<CacheEntry<unknown>, "value">;
+```
+
+<AutoTypeTable path="../src/cache.types.ts" name="CacheEntryMeta" />
+
+## Why it exists
+
+Some questions do not need the value. "Is this key still valid?" and "what is in
+the cache right now?" only need the key and the expiry.
+
+Reading the value to answer them is wasteful, and on a persistent store it is
+expensive: [`FileSystemStore`](/reference/file-system-store) would have to read a
+second file off disk and run it through superjson. So metadata is stored
+separately and read on its own.
+
+That is why `has()` is cheap no matter how large the cached value is.
+
+```ts
+await cache.has("user:1"); // reads metadata only
+
+const entries = await cache.meta();
+// [{ key: "user:1", expiresAt: 1735689600000 }]
+```
+
+## Inspecting a cache
+
+`meta()` is the practical use. It is how you see what is in a cache without
+loading any of it.
+
+```ts
+const now = Date.now();
+const entries = await cache.meta();
+
+for (const entry of entries) {
+  const expired = entry.expiresAt !== undefined && entry.expiresAt < now;
+  console.log(entry.key, expired ? "expired" : "valid");
+}
+```
+
+<Callout type="info" title="meta() lists expired entries too">
+  `meta()` reports what is stored, not what is still valid. Nova removes an
+  expired entry when something reads it, so an entry nobody reads stays in the
+  list until you `clear()`.
+</Callout>
+
+## Used by
+
+- [`Cache.meta`](/reference/cache)
+- [`CacheStore.getMeta` and `CacheStore.meta`](/reference/cache-store)
+- [`MemoryStore`](/reference/memory-store)
+- [`FileSystemStore`](/reference/file-system-store)
+
+## Related
+
+- [`CacheEntry`](/reference/cache-entry) — the full record, value included.

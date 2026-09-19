@@ -1,0 +1,54 @@
+---
+title: SetCacheOptions
+description: The third argument to CacheStore.set. Carries the absolute expiry the cache has already worked out.
+---
+
+`SetCacheOptions` is what a [`CacheStore`](/reference/cache-store) receives when
+the cache asks it to write an entry.
+
+<AutoTypeTable path="../src/cache.types.ts" name="SetCacheOptions" />
+
+## Absolute, not relative
+
+This is the type where the split between cache and store becomes concrete.
+
+You give [`Cache.set`](/reference/cache) a **duration**:
+
+```ts
+await cache.set("user:1", user, 60_000); // valid for a minute
+```
+
+The cache resolves that against its default TTL, adds it to the current time, and
+passes the store an **instant**:
+
+```ts
+await store.set("user:1", user, { expiresAt: 1735689600000 });
+```
+
+So the store never reads a clock and never does TTL arithmetic. It writes the
+number down and hands it back on the next read. That is the whole reason a
+memory cache and a filesystem cache cannot drift apart on expiry behaviour.
+
+## No expiry
+
+`expiresAt` is optional. When it is missing, the entry does not expire.
+
+The cache omits it when the resolved TTL is `0` or `undefined`, which happens
+when you build the cache without a `ttl`, or pass `0` explicitly:
+
+```ts
+await cache.set("config", value, 0); // never expires
+```
+
+<Callout type="info" title="Store it verbatim">
+  If you are writing a store, do not interpret `expiresAt` — do not round it,
+  clamp it, or compare it to `Date.now()`. Persist it and return it unchanged in
+  [`CacheEntry`](/reference/cache-entry) and
+  [`CacheEntryMeta`](/reference/cache-entry-meta).
+</Callout>
+
+## Used by
+
+- [`CacheStore.set`](/reference/cache-store)
+- [`MemoryStore.set`](/reference/memory-store)
+- [`FileSystemStore.set`](/reference/file-system-store)

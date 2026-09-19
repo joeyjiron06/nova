@@ -8,7 +8,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         index: "./src/index.ts",
-        "stores/fsStore": "./src/stores/fsStore.ts",
+        "stores/fileSystemStore": "./src/stores/fileSystemStore.ts",
         "stores/memoryStore": "./src/stores/memoryStore.ts",
       },
     },

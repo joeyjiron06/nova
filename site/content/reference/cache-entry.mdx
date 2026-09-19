@@ -1,0 +1,48 @@
+---
+title: CacheEntry
+description: One stored record — the key, the value, and when it expires. What a store hands back from get().
+---
+
+`CacheEntry<V>` is the shape a [`CacheStore`](/reference/cache-store) stores and
+returns. It is generic over the value type.
+
+You only meet it when you work with a store directly, either because you are
+writing one or because you are inspecting one. The
+[`Cache`](/reference/cache) API unwraps it for you: `cache.get("k")` returns the
+value, not the entry.
+
+<AutoTypeTable path="../src/cache.types.ts" name="CacheEntry" />
+
+## expiresAt is absolute
+
+`expiresAt` is a Unix timestamp in milliseconds, not a duration. The cache turns
+the relative TTL you pass to `set()` into an absolute timestamp before the store
+ever sees it, which is what keeps stores free of clock logic.
+
+When `expiresAt` is omitted, the entry does not expire.
+
+```ts
+const entry = await store.get<User>("user:1");
+
+if (entry) {
+  entry.key; // "user:1"
+  entry.value; // User
+  entry.expiresAt; // 1735689600000 | undefined
+}
+```
+
+<Callout type="warn" title="An entry you read may already be expired">
+  Stores return whatever is stored without checking the clock. If you read from a
+  store directly, compare `expiresAt` against `Date.now()` yourself — or go
+  through [`Cache`](/reference/cache), which does it for you.
+</Callout>
+
+## Used by
+
+- [`CacheStore.get`](/reference/cache-store)
+- [`MemoryStore.get`](/reference/memory-store)
+- [`FileSystemStore.get`](/reference/file-system-store)
+
+## Related
+
+- [`CacheEntryMeta`](/reference/cache-entry-meta) — the same record without its value.

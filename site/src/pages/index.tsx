@@ -23,7 +23,7 @@ const HomeLayout = createHomeLayout({
 
 const stores = [
   { name: "MemoryStore", path: "nova-cache/store/memory" },
-  { name: "FilesystemStore", path: "nova-cache/store/filesystem" },
+  { name: "FileSystemStore", path: "nova-cache/store/filesystem" },
   { name: "IndexedDBStore", path: "nova-cache/store/indexeddb" },
   { name: "YourStore", path: "./your-store" },
 ];

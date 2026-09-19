@@ -11,24 +11,45 @@ import type {
 } from "../cache.types";
 
 /**
- * Filesystem-based cache store implementation which stores cache entries as files in the base path.
- * The directory looks like the following:
+ * Keeps cache entries as files on disk, so they survive a restart and can be
+ * read by any process that can see the directory.
  *
- * /basePath
- *  /key1.value.json   <-- contains the cached value
- *  /key1.meta.json    <-- contains metadata like expiration time. useful for inspecting cache entries without loading the value
+ * Keys are hashed before they touch the filesystem, so any string is a valid
+ * key. Values are serialized with superjson, so `Date`, `Map`, `Set` and
+ * `undefined` come back as what you put in.
+ *
+ * Each entry is written as two files, which is what lets `getMeta` and `meta`
+ * inspect expiry without reading the value:
+ *
+ * ```text
+ * basePath/
+ *   <hashedKey>.value.json   the cached value
+ *   <hashedKey>.meta.json    the key and its expiry
+ * ```
+ *
+ * Node only, because it reads and writes the filesystem.
  */
-export default class FsCacheStore implements CacheStore {
+export default class FileSystemStore implements CacheStore {
   private readonly basePath: string;
 
+  /**
+   * @param basePath - Directory the entries are written to. It is created on
+   * the first write, and removed entirely by `clear`.
+   */
   constructor(basePath: string) {
     this.basePath = basePath;
   }
 
+  /** Removes the whole base directory. */
   clear(): Promise<void> {
     return remove(this.basePath);
   }
 
+  /**
+   * Reads metadata for every entry, skipping the values.
+   *
+   * Returns an empty array when the directory does not exist yet.
+   */
   async meta(): Promise<CacheEntryMeta[]> {
     const dirExists = await pathExists(this.basePath);
 
@@ -47,6 +68,9 @@ export default class FsCacheStore implements CacheStore {
     );
   }
 
+  /**
+   * Reads the stored entry, or `undefined` when either file is missing.
+   */
   async get<V>(key: string): Promise<CacheEntry<V> | undefined> {
     const [meta, value] = await Promise.all([
       this.getMeta(key),
@@ -64,6 +88,7 @@ export default class FsCacheStore implements CacheStore {
     };
   }
 
+  /** Reads only the metadata file for a key, skipping the value file. */
   async getMeta(key: string): Promise<CacheEntryMeta | undefined> {
     try {
       const paths = this.getPaths(key);
@@ -74,12 +99,14 @@ export default class FsCacheStore implements CacheStore {
     }
   }
 
+  /** Removes both files for the key. */
   async delete(key: string): Promise<void> {
     const paths = this.getPaths(key);
 
     await Promise.all([remove(paths.meta), remove(paths.value)]);
   }
 
+  /** Writes the value and metadata files, creating the directory if needed. */
   async set<V>(
     key: string,
     value: V,
@@ -101,7 +128,7 @@ export default class FsCacheStore implements CacheStore {
   }
 
   private getPaths(key: string): { value: string; meta: string } {
-    const safeKey = FsCacheStore.hashKey(key);
+    const safeKey = FileSystemStore.hashKey(key);
     return {
       value: path.join(this.basePath, `${safeKey}.value.json`),
       meta: path.join(this.basePath, `${safeKey}.meta.json`),
@@ -118,6 +145,11 @@ export default class FsCacheStore implements CacheStore {
     }
   }
 
+  /**
+   * Hashes a cache key into a filename-safe string.
+   *
+   * Exposed so you can locate the files for a key on disk.
+   */
   static hashKey(key: string): string {
     const hash = crypto.createHash("md5");
     const data = hash.update(key, "utf-8");

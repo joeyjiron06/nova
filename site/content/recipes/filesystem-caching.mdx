@@ -9,10 +9,10 @@ The filesystem sits in between. Entries survive a restart, and any process that 
 
 ```ts
 import Nova from "nova-cache";
-import FilesystemStore from "nova-cache/store/filesystem";
+import FileSystemStore from "nova-cache/store/filesystem";
 
 const cache = new Nova({
-  store: new FilesystemStore("./.cache"),
+  store: new FileSystemStore("./.cache"),
   ttl: 60_000,
 });
 ```

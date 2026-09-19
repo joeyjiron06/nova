@@ -1,0 +1,55 @@
+---
+title: MemoryStore
+description: Keeps entries in a Map inside the current process. Works in every JavaScript runtime and needs no configuration.
+---
+
+`MemoryStore` is the default choice and the one that runs everywhere — Node, the
+browser, Bun, Deno. It holds a `Map` of entries in the current process.
+
+```ts
+import Nova from "nova-cache";
+import MemoryStore from "nova-cache/store/memory";
+
+const cache = new Nova({
+  store: new MemoryStore(),
+  ttl: 60_000,
+});
+```
+
+The constructor takes no arguments.
+
+## What you get
+
+**Nothing is serialized.** Values are held by reference, so a `Date` stays a
+`Date`, a class instance keeps its prototype, and there is no encoding cost on
+read or write. Any value is allowed, including ones that cannot be serialized at
+all, such as functions and DOM nodes.
+
+**Nothing is shared.** The map lives in one process. A second process, or a
+second worker, has its own empty cache.
+
+**Nothing survives.** Entries die with the process.
+
+<Callout type="warn" title="Entries are not evicted on expiry">
+  An expired entry is removed when something reads it, not when it expires.
+  Caching a large number of keys that are never read again will hold onto memory.
+  Call `clear()` if that matters to you.
+</Callout>
+
+## Methods
+
+`MemoryStore` implements [`CacheStore`](/reference/cache-store) exactly, with no
+extra methods.
+
+<AutoTypeTable
+  path="../src/stores/memoryStore.ts"
+  name="MemoryStoreApi"
+  type={`import type MemoryStore from "./memoryStore";
+export type MemoryStoreApi = Pick<MemoryStore, keyof MemoryStore>;`}
+/>
+
+## Related
+
+- [`CacheStore`](/reference/cache-store) — the contract this implements.
+- [`FileSystemStore`](/reference/file-system-store) — the same contract, but entries survive a restart.
+- [`CacheEntry`](/reference/cache-entry) — what `get` returns.

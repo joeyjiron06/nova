@@ -43,7 +43,7 @@ Refreshing slightly early is still worth doing. A token that expires while a req
 
 `MemoryStore` holds references in a `Map`. Nothing is written anywhere, and the token dies with the process.
 
-`FilesystemStore` serializes entries to plain JSON files on disk. A token cached that way sits unencrypted on the filesystem for as long as the file survives, which outlives both the TTL and the process. Use the memory store for credentials unless you have a store that encrypts at rest.
+`FileSystemStore` serializes entries to plain JSON files on disk. A token cached that way sits unencrypted on the filesystem for as long as the file survives, which outlives both the TTL and the process. Use the memory store for credentials unless you have a store that encrypts at rest.
 
 ## One fetch, not fifty
 

@@ -3,6 +3,8 @@
 @import "fumadocs-ui/css/preset.css";
 @import "fumapress/css/preset.css";
 @import "@fumapress/tegami/css/preset.css";
+@import "fumadocs-ui/css/generated/glass.css";
+
 
 @theme {
   --font-mono: "JetBrains Mono", monospace;

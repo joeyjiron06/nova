@@ -11,15 +11,13 @@ pnpm i nova-cache
 ## Usage
 
 ```ts
-import { Nova } from "nova-cache";
+import Nova from "nova-cache";
 import MemoryStore from 'nova-cache/store/memory';
 
 const memCache = new Nova({
-  store: new MemoryStore()
+  store: new MemoryStore(),
   ttl: 60_000, // default TTL in milliseconds
-})
-
-
+});
 
 await memCache.set('key', 'value')
 await memCache.get('key') // returns 'value'
@@ -30,20 +28,21 @@ await memCache.get('key') // returns 'value'
 This library uses [superjson](https://www.npmjs.com/package/superjson) to serialize and deserialize data which solves the problem when you want to store objects that contain Dates, Maps, Sets or other similar data structures that are problematic when using `JSON.stringify`. That means you can do something like
 
 ```ts
-import { Nova } from "nova-cache";
+import Nova from "nova-cache";
 import FilesystemStore from 'nova-cache/store/filesystem';
 
 const fsCache = new Nova({
-  store: new FilesystemStore()
+  store: new FilesystemStore('./.cache'),
   ttl: 60_000, // default TTL in milliseconds
-})
-
-
+});
 
 await fsCache.set('key', {
   createdAt: new Date(),
-  items: new Map({ 'key1': 1, 'key2': 2 })
-})
+  items: new Map([
+    ['key1', 1],
+    ['key2', 2],
+  ]),
+});
 
 // will return an object with Date and Map JavaScript objects even though it's saved to the filesystem
 await fsCache.get('key')

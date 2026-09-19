@@ -1,0 +1,102 @@
+---
+title: Filesystem Caching
+description: Persist cache entries on disk so they survive restarts and can be shared between processes on the same machine.
+---
+
+There is a gap between an in-memory cache and Redis. Memory dies with the process and is not visible to anything else. Redis means a network hop, a service to run, and one more thing to keep alive at 3am.
+
+The filesystem sits in between. Entries survive a restart, and any process that can see the directory can read them. No daemon, no connection string.
+
+```ts
+import Nova from "nova-cache";
+import FilesystemStore from "nova-cache/store/filesystem";
+
+const cache = new Nova({
+  store: new FilesystemStore("./.cache"),
+  ttl: 60_000,
+});
+```
+
+The directory is created for you on first write, and keys are hashed before they touch the filesystem, so `user:1` or `https://api/v2/thing` are all valid keys.
+
+## Rich types survive the trip
+
+This is the part most persistent caches get wrong. Serializing with `JSON.stringify` turns a `Date` into a string, a `Map` or `Set` into `{}`, and drops `undefined` entirely. So you cache the result of an expensive computation, read it back, and get a shape that no longer matches your types.
+
+Nova's filesystem store serializes with [superjson](https://www.npmjs.com/package/superjson), so what you put in is what you get out.
+
+```ts
+await cache.set("report:2024", {
+  generatedAt: new Date(),
+  totals: new Map([
+    ["q1", 1200],
+    ["q2", 1450],
+  ]),
+});
+
+const report = await cache.get("report:2024");
+
+report.generatedAt instanceof Date; // true
+report.totals instanceof Map; // true
+```
+
+Functions and class prototypes do not survive. Check the superjson docs for the full list of what it handles.
+
+## What ends up on disk
+
+Each entry is two files, named by an MD5 hash of the key:
+
+```text
+.cache/
+  8a7f…c21.value.json   the cached value
+  8a7f…c21.meta.json    the key and its expiry
+```
+
+Splitting them is what lets `cache.meta()` list everything in the cache without reading a single value off disk. It also means the filenames tell you nothing, so reach for `cache.meta()` rather than `ls` when you are debugging.
+
+## Sharing between processes
+
+Two processes pointed at the same directory do share entries. Be precise about what that buys you, because there are limits.
+
+**They have to actually share a filesystem.** Two workers on one box, or containers on a shared volume, are fine. Two instances on separate hosts are not, unless you mount a network filesystem — at which point you are back on the network you were trying to avoid, with weaker guarantees than Redis gives you.
+
+**Writes are not atomic and there is no locking.** A `set` writes the value file and the meta file separately. If two processes write the same key at the same moment, or a reader arrives mid-write, the entry can be torn. `get` treats a torn entry as a miss, so you refetch rather than read garbage.
+
+**Concurrent misses are deduplicated per process, not across them.** Nova collapses concurrent `wrap` calls inside one `Nova` instance, whichever store is underneath. It cannot do that across process boundaries. Ten processes missing the same key will still run your function ten times.
+
+None of that makes the filesystem store wrong for caching. It is the right tradeoff for data you can always recompute. It is the wrong tradeoff for anything where two processes disagreeing would be a correctness problem.
+
+## Two sharp edges
+
+<Callout type="warn" title="clear() deletes the directory">
+  `cache.clear()` removes the base path and everything under it, not just the
+  files Nova wrote. Give the store a directory of its own, like `./.cache`.
+  Pointing it at a directory you keep other things in will eventually cost you
+  those things.
+</Callout>
+
+**Expired files are cleaned up on read, not on a timer.** Nova drops an entry when you `get` it after its TTL has passed. An entry nobody reads again just sits there. If you cache many short-lived keys, the directory grows and nothing shrinks it. Plan on a periodic sweep for long-running processes.
+
+## When to use Redis instead
+
+Reach for a real cache server when you need any of these:
+
+- Instances on separate hosts
+- Atomic operations, or two writers that must not disagree
+- Eviction under memory pressure
+- Cache entries that outlive the machine
+
+The filesystem store is for the case before that, when Redis is more operations than the problem deserves.
+
+<Cards>
+  <Card
+    title="Token Caching"
+    href="/recipes/token-caching"
+    description="Let the auth server decide how long a token lives."
+  />
+  <Card
+    title="Philosophy"
+    href="/philosophy"
+    description="Why storage and cache behavior stay separate."
+  />
+</Cards>

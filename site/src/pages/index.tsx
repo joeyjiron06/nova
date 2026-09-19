@@ -4,10 +4,9 @@
 
 // The animated store-swap is pure CSS (keyframes + negative delays) so this
 // page stays a server component — no client JS shipped for the hero.
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
-import { ServerCodeBlock } from "fumadocs-ui/components/codeblock.rsc";
 import { buttonVariants } from "fumadocs-ui/components/ui/button";
 import { createHomeLayout } from "fumapress/layouts/home";
+import { InstallTabs } from "../components/install-tabs";
 import { StoreToggle } from "../components/store-toggle";
 import FaultyTerminal from "../components/faulty-terminal";
 import { AsciiTopography } from "../components/ascii-topography";
@@ -15,7 +14,7 @@ import { AsciiTopography } from "../components/ascii-topography";
 const HomeLayout = createHomeLayout({
   layoutProps: {
     githubUrl: "https://github.com/joeyjiron/nova",
-    links: [{ text: "Documentation", url: "/docs" }],
+    links: [{ text: "Docs", url: "/getting-started" }],
     searchToggle: {
       enabled: false,
     },
@@ -182,29 +181,6 @@ function StoreSwapCode() {
   );
 }
 
-const installCommands = [
-  { manager: "npm", command: "npm install nova-cache" },
-  { manager: "Yarn", command: "yarn add nova-cache" },
-  { manager: "pnpm", command: "pnpm add nova-cache" },
-  { manager: "Bun", command: "bun add nova-cache" },
-  { manager: "Deno", command: "deno add npm:nova-cache" },
-];
-
-function InstallTabs() {
-  return (
-    <Tabs
-      items={installCommands.map((c) => c.manager)}
-      className="w-full max-w-lg"
-    >
-      {installCommands.map((c) => (
-        <Tab key={c.manager}>
-          <ServerCodeBlock code={c.command} lang="bash" />
-        </Tab>
-      ))}
-    </Tabs>
-  );
-}
-
 function Hero() {
   return (
     <section className="relative flex-1 overflow-hidden">
@@ -242,7 +218,7 @@ function Hero() {
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <a
-              href="/docs"
+              href="/getting-started"
               className={buttonVariants({
                 variant: "primary",
                 className: "px-5 py-2.5",

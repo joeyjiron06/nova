@@ -3,6 +3,7 @@ import os from "os";
 import path from "path";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { Nova } from "./cache";
+import type { WrapEntry } from "./cache.types";
 import FsStore from "./stores/fsStore";
 import MemoryStore from "./stores/memoryStore";
 
@@ -471,6 +472,184 @@ describe("cache", () => {
       expect(value2).toBe(value);
 
       expect(fn).toHaveBeenCalledTimes(2); //
+    });
+
+    it("should run the function once when concurrent callers miss the same key", async () => {
+      const key = "concurrentMissKey";
+      const value = "concurrentMissValue";
+
+      const fn = vi.fn(async () => {
+        await setTimeout(50);
+        return value;
+      });
+
+      const results = await Promise.all([
+        cache.wrap(key, fn),
+        cache.wrap(key, fn),
+        cache.wrap(key, fn),
+      ]);
+
+      expect(results).toEqual([value, value, value]);
+      expect(fn).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not cache a rejection", async () => {
+      const key = "rejectionKey";
+      const value = "recoveredValue";
+
+      const fn = vi
+        .fn()
+        .mockRejectedValueOnce(new Error("boom"))
+        .mockResolvedValueOnce(value);
+
+      await expect(cache.wrap(key, fn)).rejects.toThrow("boom");
+      expect(await cache.has(key)).toBe(false);
+
+      // A failed call must not poison the key for everyone after it
+      expect(await cache.wrap(key, fn)).toBe(value);
+      expect(fn).toHaveBeenCalledTimes(2);
+    });
+
+    it("should use the ttl set by setTTL over the one passed to wrap", async () => {
+      const key = "setTtlKey";
+      const value = "setTtlValue";
+
+      const fn = vi.fn(async (entry: WrapEntry) => {
+        entry.setTTL(100);
+        return value;
+      });
+
+      // The 60s ttl below must lose to the 100ms set inside the function
+      expect(await cache.wrap(key, fn, { ttl: 60_000 })).toBe(value);
+      expect(fn).toHaveBeenCalledTimes(1);
+
+      const [meta] = await cache.meta();
+      expect(meta.expiresAt).toBeLessThanOrEqual(Date.now() + 100);
+
+      expect(await cache.wrap(key, fn, { ttl: 60_000 })).toBe(value);
+      expect(fn).toHaveBeenCalledTimes(1);
+
+      await setTimeout(150);
+
+      expect(await cache.wrap(key, fn, { ttl: 60_000 })).toBe(value);
+      expect(fn).toHaveBeenCalledTimes(2);
+    });
+
+    it("should join an in flight call when forceRefresh is true", async () => {
+      const key = "forceJoinKey";
+      const value = "forceJoinValue";
+
+      const fn = vi.fn(async () => {
+        await setTimeout(50);
+        return value;
+      });
+
+      const first = cache.wrap(key, fn);
+      const second = cache.wrap(key, fn, { forceRefresh: true });
+
+      expect(await Promise.all([first, second])).toEqual([value, value]);
+      expect(fn).toHaveBeenCalledTimes(1);
+    });
+
+    it("should run the function once for overlapping forceRefresh calls", async () => {
+      const key = "overlappingForceKey";
+      const value = "overlappingForceValue";
+
+      const fn = vi.fn(async () => {
+        await setTimeout(50);
+        return value;
+      });
+
+      const results = await Promise.all([
+        cache.wrap(key, fn, { forceRefresh: true }),
+        cache.wrap(key, fn, { forceRefresh: true }),
+      ]);
+
+      expect(results).toEqual([value, value]);
+      expect(fn).toHaveBeenCalledTimes(1);
+    });
+
+    it("should neither join nor register an in flight call when disableCache is true", async () => {
+      const key = "disableCacheFlightKey";
+      const value = "disableCacheFlightValue";
+
+      const fn = vi.fn(async () => {
+        await setTimeout(50);
+        return value;
+      });
+
+      // Two disabled calls must not collapse into one
+      const disabled = Promise.all([
+        cache.wrap(key, fn, { disableCache: true }),
+        cache.wrap(key, fn, { disableCache: true }),
+      ]);
+
+      // and a normal call must not be able to join one of them
+      const normal = cache.wrap(key, fn);
+
+      expect(await disabled).toEqual([value, value]);
+      expect(await normal).toBe(value);
+      expect(fn).toHaveBeenCalledTimes(3);
+
+      // only the normal call wrote anything
+      expect(await cache.has(key)).toBe(true);
+    });
+
+    it("should ignore setTTL when disableCache is true", async () => {
+      const key = "disableCacheSetTtlKey";
+      const value = "disableCacheSetTtlValue";
+
+      const fn = vi.fn(async (entry: WrapEntry) => {
+        entry.setTTL(60_000);
+        return value;
+      });
+
+      expect(await cache.wrap(key, fn, { disableCache: true })).toBe(value);
+
+      // setTTL has nothing to act on, because nothing was stored
+      expect(await cache.has(key)).toBe(false);
+      expect(await cache.meta()).toEqual([]);
+    });
+
+    it("should expose an in flight value to get but not to has", async () => {
+      const key = "inFlightVisibilityKey";
+      const value = "inFlightVisibilityValue";
+
+      const fn = vi.fn(async () => {
+        await setTimeout(50);
+        return value;
+      });
+
+      const pending = cache.wrap(key, fn);
+
+      // has reads the store, which has nothing in it yet
+      expect(await cache.has(key)).toBe(false);
+
+      // get waits on the call in flight
+      expect(await cache.get(key)).toBe(value);
+
+      await pending;
+      expect(await cache.has(key)).toBe(true);
+      expect(fn).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not throw from get when an in flight call rejects", async () => {
+      const key = "inFlightRejectionKey";
+
+      const fn = vi.fn(async () => {
+        await setTimeout(50);
+        throw new Error("boom");
+      });
+
+      const pending = cache.wrap(key, fn);
+
+      // Attach the handler now. Holding a rejecting promise across an await is
+      // what triggers an unhandled rejection, and that is a test artifact rather
+      // than library behaviour.
+      const rejection = pending.catch((error: Error) => error.message);
+
+      await expect(cache.get(key)).resolves.toBeUndefined();
+      await expect(rejection).resolves.toBe("boom");
     });
   });
 });

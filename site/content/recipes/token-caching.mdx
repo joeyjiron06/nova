@@ -1,0 +1,83 @@
+---
+title: Token Caching
+description: Cache an access token and let the auth server decide how long it lives.
+---
+
+Access tokens are the classic cache-aside case. Check the cache, and if the token is not there, fetch a new one and store it. The part that makes it awkward is the TTL, because you do not know how long the token is good for until the response comes back.
+
+That is normally a handful of lines you rewrite in every project. With `wrap` it is one call.
+
+```ts
+const token = await cache.wrap("token", async (entry) => {
+  const tokenResponse = await fetchToken();
+
+  entry.setTTL(tokenResponse.expiresIn - 3000); // a little buffer before expiry
+
+  return tokenResponse.token;
+});
+```
+
+On a hit you get the cached token and your callback never runs. On a miss Nova runs the callback, stores what you return, and hands it back.
+
+The `entry` argument is the part that makes this work for tokens. Call `entry.setTTL` once the response arrives and Nova uses that value when it stores the entry, so the auth server decides the lifetime instead of you guessing it. It beats the `ttl` you passed to `wrap` and the cache default. Skip the call and those fall back into place.
+
+Everything after this is the sharp edges.
+
+## TTL is in milliseconds
+
+Nova measures every TTL in milliseconds. Token endpoints usually report seconds, so convert before you call `setTTL`. Get this wrong and nothing looks broken: the cache still returns correct tokens, it just never hits, and you quietly hammer the auth server on every request.
+
+## A TTL of `0` means forever
+
+<Callout type="warn" title="Do not floor a computed TTL with Math.max">
+  If you subtract a refresh margin from the token lifetime, `Math.max(ttl, 0)`
+  is the natural instinct and it is exactly wrong. Nova treats `0` as "never
+  expires." A token shorter-lived than your margin floors to `0` and gets cached
+  for the lifetime of the process. Check that the value is above zero and skip
+  the `setTTL` call otherwise, so the fallback applies.
+</Callout>
+
+Refreshing slightly early is still worth doing. A token that expires while a request is in flight fails at the far end, where the error is much harder to read.
+
+## Keep tokens in memory
+
+`MemoryStore` holds references in a `Map`. Nothing is written anywhere, and the token dies with the process.
+
+`FilesystemStore` serializes entries to plain JSON files on disk. A token cached that way sits unencrypted on the filesystem for as long as the file survives, which outlives both the TTL and the process. Use the memory store for credentials unless you have a store that encrypts at rest.
+
+## One fetch, not fifty
+
+Nova tracks the `wrap` calls that are still running. Concurrent misses on the same key share one run of your callback, no matter which store sits underneath. If fifty requests come in at startup and all miss, your callback runs once and every caller shares the same result.
+
+That matters more for tokens than for most cached values. Auth endpoints are rate limited, and a cold start is exactly when you are most likely to send a burst at one.
+
+<Callout type="info" title="forceRefresh joins a refresh already running">
+  A refresh in flight is the refresh `forceRefresh` was going to start, so it
+  waits for that one instead of opening a second. The edge case is a caller that
+  got a 401 on the old token: if a fetch started *before* that 401, joining it
+  hands back the same expired token. Call `wrap` with `disableCache: true` to
+  fetch a token of your own for the request in front of you. You cannot force
+  the stored value while another call is in flight, so let the cache catch up on
+  the next miss.
+</Callout>
+
+Deduplication is scoped to one `Nova` instance and one process. Two `Nova`
+instances over the same store, or two processes over the same directory, do not
+collapse each other's calls.
+
+A caller that joins a running call inherits the TTL and options of the caller
+that started it. Your own `ttl` is ignored, and so is a `setTTL` you never got
+to make, because your callback never ran.
+
+## A failed fetch is not cached
+
+Nothing is written until your callback resolves, so a rejection leaves the cache
+untouched and the next caller tries again. The error still reaches every caller
+that was waiting on that call.
+
+One asymmetry to know about. While a fetch is in flight, `get` returns the value
+it is about to produce, because waiting on it beats returning stale data. `has`
+reads the store and answers `false`, because nothing is stored yet. In the same
+window a `set` or `delete` you make by hand will not take hold: `get` reads the
+call in flight before it reads the store, so your value is shadowed right away,
+and then overwritten when the call lands.

@@ -1,0 +1,92 @@
+---
+title: Philosophy
+description: The guiding principles behind Nova
+---
+
+Nova is built on four ideas: keep the core small, use what JavaScript already gives you, make async behavior predictable, and never lose the shape of your data. Here is what each one means in practice.
+
+## A lean, extendable core
+
+Plenty of libraries already implement TTL and the cache-aside pattern. Nova is not trying to be another one of those. The goal is to give you one API that outlives whatever storage you happen to use today.
+
+The core is a single class with a `Map`-like API and no runtime dependencies.
+
+```ts
+export interface Cache {
+  set<V>(key: string, value: V, ttl?: number): Promise<void>;
+  get<V>(key: string): Promise<V | undefined>;
+  delete(key: string): Promise<void>;
+  has(key: string): Promise<boolean>;
+  clear(): Promise<void>;
+  meta(): Promise<CacheEntryMeta[]>;
+  setDefaultTTL(ttl: number): void;
+  wrap<V>(
+    key: string,
+    fn: (entry: WrapEntry) => Promise<V>,
+    options?: CacheWrapOptions,
+  ): Promise<V>;
+}
+```
+
+Eight methods, all of them thin. A store reads and writes bytes; it never decides when an entry expires. That rule is what keeps TTL behavior identical no matter where your data lives, and it is why a new store is an afternoon of work instead of a rewrite.
+
+The payoff is that swapping storage is a one-line change. Your calling code does not know or care which store is underneath.
+
+## Built on modern JavaScript
+
+Nova targets every JavaScript runtime: Node, the browser, Bun, and Deno. That is realistic now because the runtimes have converged on the same standards, so the core only needs primitives that all of them already have.
+
+The API follows that same instinct. It looks like `Map` because you already know `Map`. Where a store needs something platform-specific, such as `node:fs` or IndexedDB, that code lives in the store and nowhere else.
+
+## Predictable async behavior
+
+Cache-aside has a race condition built into it. Two callers miss on the same key at the same time, and both run the expensive function. You pay twice for one result.
+
+`wrap` closes that gap. You give it a key and a function; it returns the cached value on a hit and runs your function on a miss.
+
+```ts
+const user = await cache.wrap("user:1", () => fetchUser(1), { ttl: 30_000 });
+```
+
+Nova keeps track of the `wrap` calls that are still running. A second caller asking for the same key while the first call is in flight waits on that call instead of starting its own, so your function runs once. This lives in the core, so every store gets it, and a store author never thinks about it.
+
+The function also receives an `entry` argument, for the case where you only learn the right TTL once the answer arrives.
+
+```ts
+const token = await cache.wrap("token", async (entry) => {
+  const response = await fetchToken();
+  entry.setTTL(response.expiresIn);
+  return response.token;
+});
+```
+
+<Callout type="warn" title="Deduplication is per instance and per process">
+  Two `Nova` instances over one store do not collapse each other's calls, and
+  neither do two processes over one directory. A caller that joins a running
+  call also inherits the TTL and options of the caller that started it.
+</Callout>
+
+## Serialization that keeps your types
+
+Anything stored outside of memory has to be serialized, and `JSON.stringify` quietly loses data. A `Date` comes back as a string, a `Map` or `Set` comes back as `{}`, and `undefined` disappears entirely.
+
+The filesystem store uses [superjson](https://www.npmjs.com/package/superjson) so those values round-trip as themselves. You write a `Date`, you read a `Date`.
+
+```ts
+await cache.set("session", { createdAt: new Date() });
+
+const session = await cache.get("session");
+session.createdAt instanceof Date; // true
+```
+
+Serialization is a store concern, not a core concern. `MemoryStore` skips it completely and holds references, so you only pay the cost when the storage layer actually needs it. See the superjson docs for the limits on what can and cannot be serialized.
+
+## What Nova does not do
+
+Saying no is part of staying lean. As of today, Nova deliberately leaves out:
+
+- **Eviction beyond TTL.** There is no size limit and no LRU policy. Entries expire on time or when you delete them.
+- **Cross-process coordination.** Two processes pointed at the same filesystem directory do not coordinate. Deduplication is per instance.
+- **Background expiration.** Neither `get` nor `has` will return stale data, and `get` deletes an expired entry as it reads it. Nothing sweeps the store on a timer, though, and `has` reports `false` without removing anything, so a key you only ever check with `has` stays where it is.
+
+If you need one of these, the adapter interface is the place to add it.

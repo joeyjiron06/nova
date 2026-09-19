@@ -3,34 +3,52 @@ import type {
   CacheOptions,
   CacheStore,
   CacheWrapOptions,
+  Cache,
+  WrapEntry,
 } from "./cache.types";
 
-export class Nova {
+export class Nova implements Cache {
   private readonly store: CacheStore;
   private readonly options: CacheOptions;
+
+  /**
+   * Calls to `wrap` that are still running, keyed by cache key.
+   *
+   * Deduplication lives here rather than in a store so that every store gets it
+   * for free. It is scoped to this instance, so two Nova instances sharing one
+   * store will not collapse each other's calls.
+   */
+  private readonly inFlight: Map<string, Promise<unknown>>;
 
   constructor(options: CacheOptions) {
     this.options = options;
     this.store = options.store;
+    this.inFlight = new Map();
   }
 
   setDefaultTTL(ttl: number): void {
     this.options.ttl = ttl;
   }
 
+  /**
+   * Returns the value for the given key, or undefined if it is missing or expired.
+   *
+   * If a `wrap` call is in flight for this key, its result is returned rather than
+   * the stored value, because the stored value is by definition out of date. A
+   * failing `wrap` never makes `get` throw; it falls through to the store instead.
+   */
   async get<V>(key: string): Promise<V | undefined> {
-    const cacheEntry = await this.store.get<V>(key);
+    const inFlight = this.inFlight.get(key);
 
-    if (!cacheEntry) {
-      return undefined;
+    if (inFlight) {
+      try {
+        return (await inFlight) as V;
+      } catch {
+        // `get` has no error contract, so a failing `wrap` must not surface here.
+      }
     }
 
-    if (this.isExpired(cacheEntry)) {
-      await this.store.delete(cacheEntry.key);
-      return undefined;
-    }
-
-    return cacheEntry.value;
+    return this.readFromStore<V>(key);
   }
 
   /**
@@ -50,33 +68,40 @@ export class Nova {
     return this.store.delete(key);
   }
 
+  /**
+   * Returns the cached value for the key, or runs `fn` and caches what it returns.
+   *
+   * Concurrent calls for the same key share a single run of `fn`, including calls
+   * passing `forceRefresh`: a refresh that is already running is the refresh they
+   * asked for. `disableCache` opts out of all of it.
+   */
   async wrap<V>(
     key: string,
-    fn: () => Promise<V>,
+    fn: (entry: WrapEntry) => Promise<V>,
     options?: CacheWrapOptions,
   ): Promise<V> {
-    if (this.store.wrap) {
-      return this.store.wrap<V>(key, fn, {
-        ...options,
-        ttl: this.resolveTTL(options?.ttl),
-      });
-    }
-
     if (options?.disableCache) {
-      return fn();
+      // Nothing is stored, so setTTL has nothing to act on.
+      return fn({ setTTL: () => {} });
     }
 
-    const cachedValue = await this.get<V>(key);
+    const inFlight = this.inFlight.get(key);
 
-    if (cachedValue !== undefined && !options?.forceRefresh) {
-      return cachedValue;
+    if (inFlight) {
+      return inFlight as Promise<V>;
     }
 
-    const result = await fn();
+    // Nothing may be awaited between the lookup above and the registration below,
+    // or two concurrent misses both pass the lookup before either one registers.
+    const pending = this.resolve<V>(key, fn, options);
 
-    await this.set<V>(key, result, options?.ttl);
+    this.inFlight.set(key, pending);
 
-    return result;
+    try {
+      return await pending;
+    } finally {
+      this.inFlight.delete(key);
+    }
   }
 
   async has(key: string): Promise<boolean> {
@@ -91,6 +116,51 @@ export class Nova {
 
   async clear(): Promise<void> {
     await this.store.clear();
+  }
+
+  private async resolve<V>(
+    key: string,
+    fn: (entry: WrapEntry) => Promise<V>,
+    options?: CacheWrapOptions,
+  ): Promise<V> {
+    if (!options?.forceRefresh) {
+      // Reads the store directly. Going through `get` would consult the in-flight
+      // map, which is about to hold this very call.
+      const cachedValue = await this.readFromStore<V>(key);
+
+      if (cachedValue !== undefined) {
+        return cachedValue;
+      }
+    }
+
+    let ttl: number | undefined;
+
+    const entry: WrapEntry = {
+      setTTL: (value: number) => {
+        ttl = value;
+      },
+    };
+
+    const result = await fn(entry);
+
+    await this.set<V>(key, result, ttl ?? options?.ttl);
+
+    return result;
+  }
+
+  private async readFromStore<V>(key: string): Promise<V | undefined> {
+    const cacheEntry = await this.store.get<V>(key);
+
+    if (!cacheEntry) {
+      return undefined;
+    }
+
+    if (this.isExpired(cacheEntry)) {
+      await this.store.delete(cacheEntry.key);
+      return undefined;
+    }
+
+    return cacheEntry.value;
   }
 
   private isExpired(entry: CacheEntryMeta): boolean {

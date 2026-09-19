@@ -1,0 +1,102 @@
+---
+title: Why Nova
+description: How Nova compares to other JavaScript cache libraries, and when to reach for something else.
+---
+
+Caching should not be different in every environment.
+
+In-memory, filesystem, IndexedDB — each one usually means reaching for a different library. Different APIs. Different TTL semantics. Different things to learn. Your caching strategy should not change just because your storage did.
+
+That is the gap Nova is built for.
+
+## The problem
+
+Most cache libraries are designed around one storage technology. That is a reasonable choice, and it makes them very good at their job. It also means the cache behavior you care about gets tied to the thing holding the bytes.
+
+So a full-stack app ends up looking like this:
+
+```text
+YOUR APPLICATION
+       │
+       ├── Memory cache ──── Library A
+       │
+       ├── File cache ────── Library B
+       │
+       └── IndexedDB cache ─ Library C
+```
+
+Same problem, three libraries, three sets of semantics. Then you write expiration logic three times, because each one handles TTL a little differently — or does not handle it at all.
+
+## What Nova does differently
+
+Nova owns the cache behavior. The store only owns the bytes.
+
+```text
+          YOUR APPLICATION
+                 │
+                 ▼
+             Nova API
+                 │
+      ┌──────────┼──────────┐
+      ▼          ▼          ▼
+   Memory   Filesystem   Your store
+```
+
+TTL, expiration, and `wrap` live in the core, so they behave identically no matter what sits underneath. A store implements six small methods and never decides when an entry expires.
+
+The practical result is that switching storage is a one-line change:
+
+```ts
+// In the browser, or anywhere you just need speed
+const cache = new Nova({ store: new MemoryStore(), ttl: 60_000 });
+
+// On the server, when the cache has to outlive a restart
+const cache = new Nova({ store: new FilesystemStore("./.cache"), ttl: 60_000 });
+```
+
+Every `get`, `set`, `has`, and `wrap` call around it stays exactly the same.
+
+## How Nova compares
+
+There are plenty of great caching libraries for JavaScript. Most are built around a particular runtime or a particular caching strategy. Nova makes a different tradeoff: one cache API across runtimes, with storage as an implementation detail.
+
+|                       | **Nova**                  | **lru-cache** | **Keyv**          | **cache-manager** | **node-cache**    |
+| --------------------- | ------------------------- | ------------- | ----------------- | ----------------- | ----------------- |
+| **Node.js**           | ✓                         | ✓             | ✓                 | ✓                 | ✓                 |
+| **Browser**           | ✓ <sup>1</sup>            | ✓             | Node-first        | Node-first        | Node-first        |
+| **Other JS runtimes** | ✓ <sup>1</sup>            | Partial       | Best effort       | —                 | —                 |
+| **Pluggable storage** | ✓                         | —             | ✓                 | ✓                 | —                 |
+| **Built-in TTL**      | ✓                         | ✓             | ✓                 | ✓                 | ✓                 |
+| **Per-entry TTL**     | ✓                         | ✓             | ✓                 | ✓                 | ✓                 |
+| **Wrap an async fn**  | ✓                         | ✓ (`fetch`)   | —                 | ✓                 | —                 |
+| **Size/LRU eviction** | —                         | ✓             | Adapter           | Adapter           | —                 |
+| **Primary focus**     | Cross-runtime abstraction | In-memory LRU | Key-value storage | Node cache tiers  | Node memory cache |
+
+<sup>1</sup> Nova's core and memory store use only standard JavaScript, with no
+Node APIs, so they run wherever JavaScript runs. Automated tests currently run
+on Node. The filesystem store is Node-only by design.
+
+Established alternatives, different tradeoffs. Nova is not trying to replace every caching library. It is for when you want the same cache abstraction across Node, browsers, and other JavaScript runtimes.
+
+<Callout type="info" title="Nova is in beta">
+  Nova is published as a beta release. The API is small and the test suite
+  enforces full coverage, but it has far less production mileage than the
+  libraries above. Weigh that for anything critical.
+</Callout>
+
+## The short version
+
+Use Nova when the same caching code has to run in more than one place, and you would rather learn one API than three.
+
+<Cards>
+  <Card
+    title="Getting Started"
+    href="/getting-started"
+    description="Install Nova and cache your first value."
+  />
+  <Card
+    title="Philosophy"
+    href="/philosophy"
+    description="The guiding principles behind the API."
+  />
+</Cards>

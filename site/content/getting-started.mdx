@@ -1,0 +1,173 @@
+---
+title: Getting Started
+description: Install Nova, pick a store, and cache your first value in about a minute.
+---
+
+import { InstallTabs } from "../src/components/install-tabs";
+
+Nova is a caching library that gives you one simple API, so you only have to learn caching once and swap the storage layer as you need it. The same API works for back-end storage in your Node server and for cache storage on the client.
+
+The part that usually hurts is TTL. Nova implements it for you, no matter what storage mechanism you're using. Without this library, you end up reaching for one library on the server and a different one in the browser, each with its own API and its own quirks. Nova is a single interface that almost looks like the JavaScript `Map` interface, with some nice additions on top for convenience.
+
+## Install
+
+All you have to do is install it with whatever package manager you want.
+
+<InstallTabs className="w-full" />
+
+## Cache your first value
+
+Pick your storage mechanism and start using it. The easiest way to start is an in-memory cache, which works in any environment — your back end or your front end.
+
+```ts
+import Nova from "nova-cache";
+import MemoryStore from "nova-cache/store/memory";
+
+const cache = new Nova({
+  store: new MemoryStore(),
+  ttl: 60_000, // default TTL in milliseconds
+});
+
+await cache.set("user:1", { name: "Joey" });
+await cache.get("user:1"); // { name: "Joey" }
+```
+
+That's the whole setup: a store and a default TTL. Everything else is the `Map`-like API you already know.
+
+```ts
+await cache.has("user:1"); // true
+await cache.delete("user:1");
+await cache.clear();
+```
+
+<Callout type="info" title="Nova is async">
+  Every cache operation returns a promise, even the in-memory one. That's what
+  lets you swap the store later without touching your calling code.
+</Callout>
+
+## Choose a store
+
+A store is just the place your entries live. Nova handles expiration; the store handles reads and writes.
+
+### Memory
+
+Works in any JavaScript runtime — Node, the browser, Bun, Deno. Nothing to configure.
+
+```ts
+import MemoryStore from "nova-cache/store/memory";
+
+const store = new MemoryStore();
+```
+
+### Filesystem
+
+Survives a process restart. Node-only, and it takes the directory you want the entries written to.
+
+```ts
+import Nova from "nova-cache";
+import FilesystemStore from "nova-cache/store/filesystem";
+
+const cache = new Nova({
+  store: new FilesystemStore("./.cache"),
+  ttl: 60_000,
+});
+
+await cache.set("session", {
+  createdAt: new Date(),
+  items: new Map([
+    ["key1", 1],
+    ["key2", 2],
+  ]),
+});
+
+// Dates and Maps come back as real Dates and Maps
+await cache.get("session");
+```
+
+The filesystem store uses [superjson](https://www.npmjs.com/package/superjson) to serialize and deserialize, which solves the problem of storing objects that contain Dates, Maps, Sets, and other structures that `JSON.stringify` mangles. See the superjson docs for the limits on what can and can't be serialized.
+
+## Share the same code everywhere
+
+This is the beautiful part for full-stack applications: you can share cache code between the front end and the back end. Your front-end code can have its own in-memory cache, your server can have its own in-memory cache, and the code looks identical.
+
+```ts
+// cache.ts — imported by both the browser bundle and the server
+import Nova from "nova-cache";
+import MemoryStore from "nova-cache/store/memory";
+
+export const cache = new Nova({
+  store: new MemoryStore(),
+  ttl: 5 * 60_000,
+});
+```
+
+When the server needs to outlive a restart, the only line that changes is the store.
+
+## Control expiration
+
+The `ttl` you pass to the constructor is the default for every entry. You can override it per entry, and `0` means the entry never expires.
+
+```ts
+await cache.set("short-lived", value, 5_000); // expires in 5 seconds
+await cache.set("forever", value, 0); // never expires
+
+cache.setDefaultTTL(30_000); // change the default at runtime
+```
+
+Neither `get` nor `has` will hand you an expired entry. `get` also deletes it on the way out. `has` only reports `false` and leaves it alone, so a key you only ever check with `has` stays in the store until something reads it.
+
+## Wrap an expensive call
+
+`wrap` is the convenience method on top of the `Map`-like API. Give it a key and a function: on a hit you get the cached value, on a miss Nova runs the function, stores the result, and returns it.
+
+```ts
+const user = await cache.wrap("user:1", () => fetchUser(1), { ttl: 30_000 });
+```
+
+Two escape hatches for when you need them:
+
+```ts
+await cache.wrap("user:1", () => fetchUser(1), { forceRefresh: true }); // ignore the cached value
+await cache.wrap("user:1", () => fetchUser(1), { disableCache: true }); // skip the cache entirely
+```
+
+Concurrent callers on the same key share one run of your function, including callers passing `forceRefresh`: a refresh already running is the refresh they asked for. `disableCache` opts out of all of it.
+
+## Set the TTL from the result
+
+Sometimes you only learn the right TTL once the answer arrives. The function you pass to `wrap` receives an `entry` for exactly that.
+
+```ts
+const token = await cache.wrap("token", async (entry) => {
+  const response = await fetchToken();
+
+  entry.setTTL(response.expiresIn); // milliseconds, same as everywhere else
+
+  return response.token;
+});
+```
+
+`setTTL` beats the `ttl` you passed to `wrap` and beats the cache default. Never call it and those fall back into place. See [Token caching](/recipes/token-caching) for the sharp edges.
+
+## Inspect what's cached
+
+`meta` returns the key and expiration of every entry without loading the values, which is handy for debugging.
+
+```ts
+await cache.meta(); // [{ key: "user:1", expiresAt: 1764... }]
+```
+
+## Next steps
+
+<Cards>
+  <Card
+    title="Why Nova"
+    href="/why-nova"
+    description="How Nova compares to the alternatives."
+  />
+  <Card
+    title="Philosophy"
+    href="/philosophy"
+    description="The guiding principles behind the API."
+  />
+</Cards>

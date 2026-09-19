@@ -1,0 +1,12 @@
+{
+  "title": "Introduction",
+  "root": true,
+  "pages": [
+    "---Introduction---",
+    "getting-started",
+    "philosophy",
+    "why-nova",
+    "---Recipes---",
+    "...recipes"
+  ]
+}

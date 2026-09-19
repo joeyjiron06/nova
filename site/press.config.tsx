@@ -3,6 +3,9 @@ import { fumadocsMdx } from "fumapress/adapters/mdx";
 import { metaSchema, pageSchema } from "fumapress/adapters/mdx/schema";
 import { defineDocs } from "fumadocs-mdx/macro";
 import NovaLogo from "./src/assets/images/nova.svg?react";
+import { createGlassLayoutPage } from "fumapress/layouts/glass";
+
+const GlassLayout = createGlassLayoutPage<typeof config.$context>();
 
 const docs = defineDocs({
   dir: "content",
@@ -19,9 +22,11 @@ const docs = defineDocs({
   },
 });
 
-export default defineConfig({
+const config = defineConfig({
   content: docs.toFumadocsSource(),
   mode: "static",
+  renderPage: (props) => <GlassLayout {...props} />,
+
   site: {
     name: "Nova",
     baseUrl: "https://joeyjiron.com/nova",
@@ -34,6 +39,9 @@ export default defineConfig({
   // Both the home and docs layouts inherit `defaultLayoutProps` by default,
   // so setting the nav title here covers every navbar on the site.
   defaultLayoutProps: {
+    searchToggle: {
+      enabled: false,
+    },
     nav: {
       title: <NovaLogo className="h-5 w-auto" />,
       url: "/",
@@ -58,3 +66,5 @@ export default defineConfig({
     },
   },
 }).adapters(fumadocsMdx());
+
+export default config;

@@ -44,8 +44,12 @@ export default defineConfig({
   },
 
   plugins: [
+    // Deployed under https://<host>/nova/, so every route and asset URL needs
+    // the `/nova` prefix. Waku validates the trailing slash but not the leading
+    // one; without it `removeBase("/nova/", "nova/")` throws
+    // "pathname must start with basePath" the moment the client hydrates.
     press({
-      basePath: "nova/",
+      basePath: "/nova/",
     }),
     fumadocsMdx(),
     tailwindcss(),

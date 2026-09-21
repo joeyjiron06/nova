@@ -6,14 +6,19 @@
 // page stays a server component — no client JS shipped for the hero.
 import { buttonVariants } from "fumadocs-ui/components/ui/button";
 import { createHomeLayout } from "fumapress/layouts/home";
+// A raw `<a href="/...">` skips the router and therefore skips `basePath`,
+// so it would point at the domain root instead of `/nova/...`.
+import { Link } from "fumapress/client";
 import { InstallTabs } from "../components/install-tabs";
 import { StoreToggle } from "../components/store-toggle";
 import FaultyTerminal from "../components/faulty-terminal";
 import { AsciiTopography } from "../components/ascii-topography";
 
+const GithubUrl = "https://github.com/joeyjiron06/nova";
+
 const HomeLayout = createHomeLayout({
   layoutProps: {
-    githubUrl: "https://github.com/joeyjiron/nova",
+    githubUrl: GithubUrl,
     links: [{ text: "Docs", url: "/getting-started" }],
     searchToggle: {
       enabled: false,
@@ -217,7 +222,7 @@ function Hero() {
             filesystem, IndexedDB — or write your own store in an afternoon.
           </p>
           <div className="flex flex-wrap items-center gap-3">
-            <a
+            <Link
               href="/getting-started"
               className={buttonVariants({
                 variant: "primary",
@@ -225,9 +230,9 @@ function Hero() {
               })}
             >
               Read the docs
-            </a>
+            </Link>
             <a
-              href="https://github.com/joeyjiron/nova"
+              href={GithubUrl}
               className={buttonVariants({
                 variant: "outline",
                 className: "px-5 py-2.5",
@@ -1389,7 +1394,7 @@ function InstallCta() {
             Install Nova
           </a>
           <a
-            href="https://github.com/joeyjiron/nova"
+            href={GithubUrl}
             className={buttonVariants({
               variant: "outline",
               className: "px-5 py-2.5",
@@ -1428,7 +1433,7 @@ function SiteFooter() {
         <nav className="flex items-center gap-4">
           <a
             className="hover:text-fd-foreground transition-colors"
-            href="https://github.com/joeyjiron06"
+            href={GithubUrl}
             aria-label="GitHub"
           >
             <svg

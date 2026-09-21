@@ -1,3 +1,4 @@
+import "fake-indexeddb/auto";
 import { setTimeout } from "node:timers/promises";
 import os from "os";
 import path from "path";
@@ -5,6 +6,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { Nova } from "./cache";
 import type { WrapEntry } from "./cache.types";
 import FileSystemStore from "./stores/fileSystemStore";
+import IndexedDBStore from "./stores/indexedDBStore";
 import MemoryStore from "./stores/memoryStore";
 
 const memCache = new Nova({
@@ -17,6 +19,10 @@ const fsCache = new Nova({
   store: new FileSystemStore(fsCachePath),
 });
 
+const idbCache = new Nova({
+  store: new IndexedDBStore("nova-cache-test"),
+});
+
 // removes the fs cache directory after all tests are done
 afterAll(() => fsCache.clear());
 
@@ -24,6 +30,7 @@ describe("cache", () => {
   describe.each([
     { name: "memory cache", cache: memCache },
     { name: "fs cache", cache: fsCache },
+    { name: "indexeddb cache", cache: idbCache },
   ])("$name", ({ cache }) => {
     beforeEach(() => cache.clear());
 

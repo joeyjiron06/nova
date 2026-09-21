@@ -24,6 +24,10 @@
       "types": "./dist/stores/fileSystemStore.d.ts",
       "default": "./dist/stores/fileSystemStore.js"
     },
+    "./store/indexeddb": {
+      "types": "./dist/stores/indexedDBStore.d.ts",
+      "default": "./dist/stores/indexedDBStore.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -42,6 +46,8 @@
     "lru",
     "cache",
     "browser",
+    "cache",
+    "indexeddb",
     "cache"
   ],
   "author": "Joey Jiron <joeyjiron06@gmail.com>",
@@ -53,6 +59,7 @@
     "@vitest/coverage-v8": "4.0.15",
     "@vitest/ui": "4.0.15",
     "eslint": "^9.39.1",
+    "fake-indexeddb": "^6.2.5",
     "globals": "^16.5.0",
     "jiti": "^2.6.1",
     "typescript": "^5.9.3",

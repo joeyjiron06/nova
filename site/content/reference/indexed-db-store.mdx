@@ -1,0 +1,147 @@
+---
+title: IndexedDBStore
+description: Keeps entries in IndexedDB, so a browser cache survives a reload and is shared by every tab on the origin.
+---
+
+`IndexedDBStore` is the browser counterpart to
+[`FileSystemStore`](/reference/file-system-store). Entries survive a reload, and
+every tab on the same origin reads the same cache.
+
+```ts
+import Nova from "nova-cache";
+import IndexedDBStore from "nova-cache/store/indexeddb";
+
+const cache = new Nova({
+  store: new IndexedDBStore(),
+  ttl: 60_000,
+});
+```
+
+<Callout type="warn" title="Browser only">
+  This store reads the global `indexedDB`, so it does not run in Node unless you
+  provide one. Use [`MemoryStore`](/reference/memory-store) or
+  [`FileSystemStore`](/reference/file-system-store) on the server.
+</Callout>
+
+## Constructor
+
+<AutoTypeTable
+  path="../src/stores/indexedDBStore.ts"
+  name="IndexedDBStoreOptions"
+  type={`export type IndexedDBStoreOptions = {
+  /**
+   * Name of the IndexedDB database the entries are written to.
+   *
+   * Opened on the first read or write, and emptied by \`clear()\`.
+   *
+   * @defaultValue "nova-cache"
+   */
+  databaseName?: string;
+};`}
+/>
+
+Pass a different name to keep two caches apart on the same origin:
+
+```ts
+const sessions = new IndexedDBStore("nova-sessions");
+const reports = new IndexedDBStore("nova-reports");
+```
+
+## How entries are stored
+
+The database holds two object stores:
+
+```text
+nova-cache (version 1)
+  values   the cached value, keyed by your cache key
+  meta     { key, expiresAt }, keyed by "key"
+```
+
+Splitting them is what makes `has()`, `getMeta()` and `meta()` cheap: they read
+the small metadata record and never clone the value. IndexedDB cannot return
+part of a record, so a single object store would mean cloning every cached value
+just to read a timestamp.
+
+Each operation runs in one transaction spanning both object stores, so a write
+never leaves a value without its metadata.
+
+## Nothing is serialized
+
+IndexedDB stores JavaScript values with the
+[structured clone algorithm](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm),
+so there is no encoding step and no `superjson`.
+
+```ts
+await cache.set("report:2024", {
+  generatedAt: new Date(),
+  totals: new Map([["q1", 1200]]),
+  seen: new Set(["q1"]),
+});
+
+const report = await cache.get("report:2024");
+
+report.generatedAt instanceof Date; // true
+report.totals instanceof Map; // true
+report.seen instanceof Set; // true
+```
+
+<Callout type="warn" title="Structured clone has limits">
+  Functions, symbols, DOM nodes and anything holding them throw `DataCloneError`
+  the moment you call `set()`. Class instances are cloned as plain objects and
+  lose their prototype. Use [`MemoryStore`](/reference/memory-store) for values
+  like those.
+</Callout>
+
+## The connection
+
+The database opens on the first read or write, not in the constructor, so
+building the store is free and cannot fail.
+
+When another tab opens the same database at a newer version, the browser fires
+`versionchange`. This store closes its connection so the other tab is not
+blocked, then reopens on the next call. `close()` does the same thing on demand,
+and is there for teardown in tests.
+
+```ts
+const store = new IndexedDBStore();
+
+await store.set("a", 1);
+await store.close(); // releases the connection
+await store.get("a"); // reopens, returns the entry
+```
+
+## Errors are not swallowed
+
+Only a missing entry returns `undefined`. A denied quota, a blocked upgrade or a
+value that cannot be cloned rejects, so a browser refusing to store data never
+looks like an empty cache.
+
+## Methods
+
+`IndexedDBStore` implements [`CacheStore`](/reference/cache-store), plus
+`close()`.
+
+<AutoTypeTable
+  path="../src/stores/indexedDBStore.ts"
+  name="IndexedDBStoreApi"
+  type={`import type IndexedDBStore from "./indexedDBStore";
+export type IndexedDBStoreApi = Pick<IndexedDBStore, keyof IndexedDBStore>;`}
+/>
+
+<Callout type="warn" title="Storing undefined reads back as a miss">
+  `set(key, undefined)` writes an entry, so `has(key)` is `true`, but `get(key)`
+  returns `undefined` and cannot be told apart from a miss.
+  [`FileSystemStore`](/reference/file-system-store) behaves the same way.
+</Callout>
+
+<Callout type="warn" title="Nothing is encrypted">
+  Entries sit in the browser profile for as long as the origin's storage
+  survives, which outlives both the TTL and the tab. Do not put credentials
+  here.
+</Callout>
+
+## Related
+
+- [`CacheStore`](/reference/cache-store) — the contract this implements.
+- [`FileSystemStore`](/reference/file-system-store) — the same contract, on disk in Node.
+- [`MemoryStore`](/reference/memory-store) — the same contract, in-process and unserialized.

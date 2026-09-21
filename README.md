@@ -50,6 +50,29 @@ await fsCache.get('key')
 
 See [superjson](https://www.npmjs.com/package/superjson) for limitations on what can and cannot be serialized.
 
+**IndexedDB usage**
+
+In the browser, `IndexedDBStore` keeps entries in IndexedDB, so they survive a reload and are shared by every tab on the origin. IndexedDB stores JavaScript values with the structured clone algorithm, so nothing is serialized and `Date`, `Map` and `Set` come back as what you put in.
+
+```ts
+import Nova from "nova-cache";
+import IndexedDBStore from 'nova-cache/store/indexeddb';
+
+const idbCache = new Nova({
+  store: new IndexedDBStore(), // pass a name to use a database other than 'nova-cache'
+  ttl: 60_000, // default TTL in milliseconds
+});
+
+await idbCache.set('key', {
+  createdAt: new Date(),
+  items: new Map([['key1', 1]]),
+});
+
+await idbCache.get('key')
+```
+
+Structured clone cannot store functions, symbols or DOM nodes, and class instances lose their prototype. Use the memory store for values like those.
+
 Check out the other stores in to `/src/stores` folder.
 
 ## Motivation

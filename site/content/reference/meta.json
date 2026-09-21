@@ -6,6 +6,7 @@
     "---Stores---",
     "memory-store",
     "file-system-store",
+    "indexed-db-store",
     "---Shared types---",
     "cache-entry",
     "cache-entry-meta",

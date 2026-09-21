@@ -9,6 +9,7 @@ export default defineConfig({
       input: {
         index: "./src/index.ts",
         "stores/fileSystemStore": "./src/stores/fileSystemStore.ts",
+        "stores/indexedDBStore": "./src/stores/indexedDBStore.ts",
         "stores/memoryStore": "./src/stores/memoryStore.ts",
       },
     },

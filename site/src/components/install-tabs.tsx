@@ -7,7 +7,7 @@ const installCommands = [
   { manager: "pnpm", command: "pnpm add nova-cache" },
   { manager: "Bun", command: "bun add nova-cache" },
   { manager: "Deno", command: "deno add npm:nova-cache" },
-];
+] as const;
 
 /**
  * Package-manager tabs for installing nova-cache.
@@ -20,7 +20,11 @@ export function InstallTabs({
   className?: string;
 }) {
   return (
-    <Tabs items={installCommands.map((c) => c.manager)} className={className}>
+    <Tabs
+      items={installCommands.map((c) => c.manager)}
+      className={className}
+      persist
+    >
       {installCommands.map((c) => (
         <Tab key={c.manager}>
           <ServerCodeBlock code={c.command} lang="bash" />

@@ -224,7 +224,7 @@ function Hero() {
                 className: "px-5 py-2.5",
               })}
             >
-              Get started
+              Read the docs
             </a>
             <a
               href="https://github.com/joeyjiron/nova"

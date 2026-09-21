@@ -45,7 +45,7 @@ export default defineConfig({
 
   plugins: [
     press({
-      basePath: "nova",
+      basePath: "nova/",
     }),
     fumadocsMdx(),
     tailwindcss(),

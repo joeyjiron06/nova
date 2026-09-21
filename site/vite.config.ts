@@ -44,7 +44,9 @@ export default defineConfig({
   },
 
   plugins: [
-    press(),
+    press({
+      basePath: "nova",
+    }),
     fumadocsMdx(),
     tailwindcss(),
     keepTypescriptGeneratorExternal(),

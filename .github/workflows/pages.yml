@@ -59,9 +59,7 @@ jobs:
         uses: actions/configure-pages@v4
       - name: Build the site
         run: |
-          pnpm run build \
-            --site "${{ steps.pages.outputs.origin }}" \
-            --base "${{ steps.pages.outputs.base_path }}"
+          pnpm run build
         working-directory: ${{ env.SITE_PATH }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

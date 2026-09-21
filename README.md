@@ -1,4 +1,4 @@
-<h1 style="display: flex; align-items: center; gap: 0.5rem;"><img src="./logo.png" style="width: 3rem; height: 3rem;"  width="48" height="48" />  nova</h1>
+<h1 style="display: flex; align-items: center; gap: 0.5rem;"><img alt="nova logo" src="./site/public/logo.png" style="width: 3rem; height: 3rem;"  width="48" height="48" />  nova</h1>
 
 An extremely lightweight utility for caching data. This is an isomorphic library that can be used in any JavaScript environment (e.g. NodeJs, Browser, Bun, Deno, etc.). The core caching logic (for things like TTL) is implemented in pure JavaScript with NO DEPENDENCIES. Each caching layer can be implemented to support multiple environments.
 
@@ -12,15 +12,15 @@ pnpm i nova-cache
 
 ```ts
 import Nova from "nova-cache";
-import MemoryStore from 'nova-cache/store/memory';
+import MemoryStore from "nova-cache/store/memory";
 
 const memCache = new Nova({
   store: new MemoryStore(),
   ttl: 60_000, // default TTL in milliseconds
 });
 
-await memCache.set('key', 'value')
-await memCache.get('key') // returns 'value'
+await memCache.set("key", "value");
+await memCache.get("key"); // returns 'value'
 ```
 
 **Filesystem usage**
@@ -29,23 +29,23 @@ This library uses [superjson](https://www.npmjs.com/package/superjson) to serial
 
 ```ts
 import Nova from "nova-cache";
-import FileSystemStore from 'nova-cache/store/filesystem';
+import FileSystemStore from "nova-cache/store/filesystem";
 
 const fsCache = new Nova({
-  store: new FileSystemStore('./.cache'),
+  store: new FileSystemStore("./.cache"),
   ttl: 60_000, // default TTL in milliseconds
 });
 
-await fsCache.set('key', {
+await fsCache.set("key", {
   createdAt: new Date(),
   items: new Map([
-    ['key1', 1],
-    ['key2', 2],
+    ["key1", 1],
+    ["key2", 2],
   ]),
 });
 
 // will return an object with Date and Map JavaScript objects even though it's saved to the filesystem
-await fsCache.get('key')
+await fsCache.get("key");
 ```
 
 See [superjson](https://www.npmjs.com/package/superjson) for limitations on what can and cannot be serialized.
@@ -56,19 +56,19 @@ In the browser, `IndexedDBStore` keeps entries in IndexedDB, so they survive a r
 
 ```ts
 import Nova from "nova-cache";
-import IndexedDBStore from 'nova-cache/store/indexeddb';
+import IndexedDBStore from "nova-cache/store/indexeddb";
 
 const idbCache = new Nova({
   store: new IndexedDBStore(), // pass a name to use a database other than 'nova-cache'
   ttl: 60_000, // default TTL in milliseconds
 });
 
-await idbCache.set('key', {
+await idbCache.set("key", {
   createdAt: new Date(),
-  items: new Map([['key1', 1]]),
+  items: new Map([["key1", 1]]),
 });
 
-await idbCache.get('key')
+await idbCache.get("key");
 ```
 
 Structured clone cannot store functions, symbols or DOM nodes, and class instances lose their prototype. Use the memory store for values like those.

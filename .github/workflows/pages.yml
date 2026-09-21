@@ -64,7 +64,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ${{ env.SITE_PATH }}/dist
+          path: ${{ env.SITE_PATH }}/dist/public
 
   deploy:
     environment:

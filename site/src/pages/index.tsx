@@ -243,7 +243,7 @@ function Hero() {
           </div>
           <InstallTabs />
         </div>
-        <div className="flex justify-center lg:justify-end">
+        <div className="flex min-w-0 justify-center lg:justify-end">
           <StoreSwapCode />
         </div>
       </div>
@@ -775,7 +775,7 @@ function SolutionSection() {
   return (
     <section className="border-fd-border border-t">
       <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-6 py-16 sm:py-20 lg:grid-cols-2 lg:gap-16">
-        <figure className="order-last flex flex-col items-center gap-5 lg:order-first lg:items-start">
+        <figure className="order-last flex min-w-0 flex-col items-center gap-5 lg:order-first lg:items-start">
           <StoreToggle />
           <figcaption className="text-fd-muted-foreground text-center text-sm text-pretty lg:text-left">
             Flip the store. The{" "}
@@ -957,7 +957,10 @@ function WrapSection() {
     <section className="border-fd-border border-t">
       <style>{wrapCss}</style>
       <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-6 py-16 sm:py-20 lg:grid-cols-2 lg:gap-16">
-        <div className="flex flex-col items-start gap-5">
+        {/* min-w-0: grid items default to min-width:auto, which would let the
+            code block's longest line widen the whole column (and the page)
+            instead of scrolling inside its own <pre>. */}
+        <div className="flex min-w-0 flex-col items-start gap-5">
           <h2 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
             Memoize the expensive stuff.
           </h2>
@@ -1147,7 +1150,9 @@ function TtlSection() {
           </figcaption>
         </figure>
 
-        <div className="flex flex-col items-start gap-5">
+        {/* min-w-0 — see WrapSection: keeps the code block scrolling instead
+            of stretching the grid column. */}
+        <div className="flex min-w-0 flex-col items-start gap-5">
           <h2 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
             Set your TTL once. Override it anywhere.
           </h2>
@@ -1419,7 +1424,7 @@ function InstallCta() {
 function SiteFooter() {
   return (
     <footer className="text-fd-muted-foreground border-t px-6 py-6 text-sm">
-      <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mx-auto flex max-w-6xl flex-row gap-3 items-center justify-between">
         <p>
           &copy; {new Date().getFullYear()}{" "}
           <a
